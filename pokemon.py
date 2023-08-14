@@ -6,6 +6,7 @@ from urllib.request import urlopen
 import pygame as pg
 
 import constants as c
+import util
 from health_bar import HealthBar
 
 
@@ -23,6 +24,7 @@ class Pokemon:
         self.stats: dict | None = None
         self.hp: int | None = None
         self.types: list | None = None
+        self.moves: list | None = None
         self.level: int = 1
         self.health_bar: HealthBar | None = None
         self.set_sprite()
@@ -49,6 +51,17 @@ class Pokemon:
         self.stats = self.get_stat()
 
         self.hp = self.stats["hp"]
+
+        all_moves: list = self.data["moves"]
+        self.moves = []
+        for move in all_moves:
+            if move["version_group_details"][-1]["level_learned_at"] == 1 and move["version_group_details"][-1]["move_learn_method"]["name"] == "level-up" and \
+                    move["version_group_details"][0]["version_group"]["name"] == "red-blue":
+                move_id = int(move["move"]["url"].removeprefix('https://pokeapi.co/api/v2/move/').removesuffix('/'))
+                data = util.fetch_json(f'move/{move_id}.json')
+                move_data = {"id": data["id"], "name": data["name"], "accuracy": data["accuracy"], "effect_chance": data["effect_chance"], "max_pp": data["pp"], "pp": data["pp"],
+                             "priority": data["priority"], "power": data["power"]}
+                self.moves.append(move_data)
 
         if self.front:
             self.health_bar = HealthBar(c.POKEMON_IMAGE_SIZE // 2, c.POKEMON_IMAGE_SIZE // 4, 200, 20, self.stats["hp"])

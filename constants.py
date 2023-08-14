@@ -1,5 +1,3 @@
-import pygame as pg
-
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 PANEL_HEIGHT = 200
