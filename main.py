@@ -17,7 +17,7 @@ clock = pg.time.Clock()
 screen = pg.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
 pg.display.set_caption(TITLE)
 
-TEXT_FONT = pg.font.Font('assets/ARCADECLASSIC.TTF', 28)
+TEXT_FONT = pg.font.Font('assets/joystix monospace.otf', 20)
 
 panel = pg.Surface((c.SCREEN_WIDTH, c.PANEL_HEIGHT))
 panel.fill(c.WHITE)
@@ -64,10 +64,11 @@ while run:
     front_pokemon.draw(screen)
     back_pokemon.draw(screen)
 
-    util.draw_text(front_pokemon.name, TEXT_FONT, c.BLACK, (c.FRONT_VALUE_POS[0] - 90, c.FRONT_VALUE_POS[1] - 40), screen, True)
-    util.draw_text(f'Lv {front_pokemon.level}', TEXT_FONT, c.BLACK, (c.FRONT_VALUE_POS[0] + 60, c.FRONT_VALUE_POS[1] - 40), screen, True)
-    util.draw_text(back_pokemon.name, TEXT_FONT, c.BLACK, (c.BACK_VALUE_POS[0] - 90 + 64, c.BACK_VALUE_POS[1] - 40), screen, True)
-    util.draw_text(f'Lv {back_pokemon.level}', TEXT_FONT, c.BLACK, (c.BACK_VALUE_POS[0] + 60 + 64, c.BACK_VALUE_POS[1] - 40), screen, True)
+    util.draw_text(front_pokemon.name, TEXT_FONT, c.BLACK, (c.FRONT_VALUE_POS[0] - 80, c.FRONT_VALUE_POS[1] - 40), screen, True)
+    util.draw_text(f'Lv {front_pokemon.level}', TEXT_FONT, c.BLACK, (c.FRONT_VALUE_POS[0] + 70, c.FRONT_VALUE_POS[1] - 40), screen, True)
+    util.draw_text(back_pokemon.name, TEXT_FONT, c.BLACK, (c.BACK_VALUE_POS[0] - 80 + 64, c.BACK_VALUE_POS[1] - 40), screen, True)
+    util.draw_text(f'Lv {back_pokemon.level}', TEXT_FONT, c.BLACK, (c.BACK_VALUE_POS[0] + 70 + 64, c.BACK_VALUE_POS[1] - 40), screen, True)
+    util.draw_text(f'{back_pokemon.hp}/{back_pokemon.stats["hp"]}', TEXT_FONT, c.BLACK, (c.BACK_VALUE_POS[0] + 70, c.BACK_VALUE_POS[1] + 40), screen, True)
 
     if fight_button.draw(screen):
         pass
@@ -76,7 +77,7 @@ while run:
     if pokemon_button.draw(screen):
         pass
     if run_button.draw(screen):
-        pass
+        run = False
 
     for event in pg.event.get():
         if event.type == pg.QUIT:
