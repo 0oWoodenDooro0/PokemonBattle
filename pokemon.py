@@ -136,12 +136,7 @@ class Pokemon:
         self.health_bar.update(self.hp)
 
     def attack(self, move: dict, defender_pokemon: 'Pokemon'):
-        b = math.floor(move['accuracy'] * 255 / 100)
-        c = self.get_stat_effect('accuracy')
-        d = defender_pokemon.get_stat_effect('evasion')
-        a = b * c / d
-        r = random.randint(1, 255)
-        if r < a and move['power']:
+        if move['power']:
             if move['crit_rate'] > 0:
                 crit = self.basic_stats['speed'] / 2
             else:
@@ -155,16 +150,27 @@ class Pokemon:
             stab = 1.5 if move_type in self.types else 1
             damage = (((2 * self.level * critical) / 5 + 2) * power * attack / defense / 50 + 2) * stab
             move_type_data = util.fetch_json(f'type/{move_type}.json')['damage_relations']
+            type_effectiveness = 1
             for i in range(len(defender_pokemon.types)):
                 if util.type_in_pokemon(move_type_data['double_damage_to'], defender_pokemon.types[i]):
                     damage = damage * 2
+                    type_effectiveness = type_effectiveness * 2
                 elif util.type_in_pokemon(move_type_data['half_damage_to'], defender_pokemon.types[i]):
                     damage = damage * 0.5
+                    type_effectiveness = type_effectiveness * 0.5
                 elif util.type_in_pokemon(move_type_data['no_damage_to'], defender_pokemon.types[i]):
                     damage = damage * 0
+                    type_effectiveness = type_effectiveness * 0
             damage = 1 if math.floor(damage) <= 1 else math.floor(damage * random.randint(217, 255) / 255)
             defender_pokemon.hp -= damage
-        elif r < a:
-            pass
+            return type_effectiveness
         else:
-            print(2)
+            return None
+
+    def attack_accuracy(self, move: dict, defender_pokemon: 'Pokemon'):
+        b = math.floor(move['accuracy'] * 255 / 100)
+        c = self.get_stat_effect('accuracy')
+        d = defender_pokemon.get_stat_effect('evasion')
+        a = b * c / d
+        r = random.randint(1, 255)
+        return True if r < a else False

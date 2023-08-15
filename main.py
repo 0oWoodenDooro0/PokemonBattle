@@ -6,6 +6,7 @@ import constants as const
 import util
 from button import Button
 from pokemon import Pokemon
+from state import BattleState, AttackState
 
 TITLE = "Pokemon Battle"
 FPS = 60
@@ -35,10 +36,15 @@ back_value_image_rect = back_value_image.get_rect()
 front_value_image_rect.center = const.FRONT_VALUE_POS
 back_value_image_rect.center = const.BACK_VALUE_POS
 
-move_panel = pg.Surface((const.SCREEN_WIDTH - const.PANEL_WIDTH - 4, const.PANEL_HEIGHT - 4))
+attribute_panel = pg.Surface((const.SCREEN_WIDTH - const.PANEL_WIDTH - 4, const.PANEL_HEIGHT - 4))
+attribute_panel.fill(const.WHITE)
+attribute_panel_rect = attribute_panel.get_rect()
+attribute_panel_rect.topleft = (const.PANEL_WIDTH + 2, const.SCREEN_HEIGHT - const.PANEL_HEIGHT + 2)
+
+move_panel = pg.Surface((const.PANEL_WIDTH - 4, const.PANEL_HEIGHT - 4))
 move_panel.fill(const.WHITE)
 move_panel_rect = move_panel.get_rect()
-move_panel_rect.topleft = (const.PANEL_WIDTH + 2, const.SCREEN_HEIGHT - const.PANEL_HEIGHT + 2)
+move_panel_rect.topleft = (0, const.SCREEN_HEIGHT - const.PANEL_HEIGHT + 2)
 
 data = util.fetch_json('pokemon/pokemon3.json')
 front_pokemon = Pokemon(data, front=True)
@@ -64,7 +70,15 @@ for i in range(4):
     move_button = Button(x, y, empty_button_image, check_mouse_on=True, center=True)
     move_buttons.append(move_button)
 
-game_state = "start"
+battle_state: BattleState = BattleState.PREBATTLE
+attack_state: AttackState = AttackState.FIRST_ATTACK
+back_move: dict | None = None
+front_move: dict | None = None
+first_move: dict | None = None
+first_pokemon: Pokemon | None = None
+last_move: dict | None = None
+last_pokemon: Pokemon | None = None
+type_effectiveness: int | float | None = None
 
 run = True
 while run:
@@ -84,7 +98,7 @@ while run:
     util.draw_text(f'{back_pokemon.hp}/{back_pokemon.stats["hp"]}', TEXT_FONT, const.BLACK, (const.BACK_VALUE_POS[0] + 70, const.BACK_VALUE_POS[1] + 40), screen, True)
 
     if fight_button.draw(screen):
-        game_state = "fight"
+        battle_state = BattleState.FIGHT
     if bag_button.draw(screen):
         pass
     if pokemon_button.draw(screen):
@@ -92,39 +106,120 @@ while run:
     if run_button.draw(screen):
         run = False
 
-    if game_state == "start":
-        util.draw_text('What will', TEXT_FONT, const.BLACK, (20, const.SCREEN_HEIGHT - const.PANEL_HEIGHT + 20), screen)
-        util.draw_text(f'{back_pokemon.name} do?', TEXT_FONT, const.BLACK, (20, const.SCREEN_HEIGHT - const.PANEL_HEIGHT + 60), screen)
+    match battle_state:
+        case BattleState.PREBATTLE:
+            util.draw_text('What will', TEXT_FONT, const.BLACK, (20, const.SCREEN_HEIGHT - const.PANEL_HEIGHT + 20), screen)
+            util.draw_text(f'{back_pokemon.name} do?', TEXT_FONT, const.BLACK, (20, const.SCREEN_HEIGHT - const.PANEL_HEIGHT + 60), screen)
 
-    if game_state == "fight":
-        for i in range(len(back_pokemon.moves)):
-            x = const.PANEL_WIDTH // 4 * (1 if i % 2 == 0 else 3)
-            y = const.SCREEN_HEIGHT - const.PANEL_HEIGHT // 4 * (3 if i // 2 == 0 else 1) - 20
-            util.draw_text(f'{back_pokemon.moves[i]["name"]}', TEXT_FONT, const.BLACK, (x, y), screen, True)
-            util.draw_text(f'{back_pokemon.moves[i]["pp"]}/{back_pokemon.moves[i]["max_pp"]}', TEXT_FONT, const.BLACK, (x, y + 40), screen, True)
-            button_click = move_buttons[i].draw(screen)
-            if button_click[0]:
-                back_move = back_pokemon.moves[i]
-                front_move = random.choice(front_pokemon.moves)
-                if back_move['priority'] >= front_move['priority']:
-                    back_pokemon.attack(back_move, front_pokemon)
-                    front_pokemon.attack(front_move, back_pokemon)
-                else:
-                    front_pokemon.attack(front_move, back_pokemon)
-                    back_pokemon.attack(back_move, front_pokemon)
-                game_state = "start"
-            elif button_click[1]:
-                move_panel.fill(const.WHITE)
-                util.draw_text(f'Power: {back_pokemon.moves[i]["power"]}', TEXT_FONT, const.BLACK, (20, 20), move_panel)
-                util.draw_text(f'Accuracy: {back_pokemon.moves[i]["accuracy"]}', TEXT_FONT, const.BLACK, (20, 60), move_panel)
-                type_name = util.fetch_json(f'type/{back_pokemon.moves[i]["type"]}.json')['name']
-                util.draw_text(f'Type: {type_name}', TEXT_FONT, const.BLACK, (20, 100), move_panel)
-                screen.blit(move_panel, move_panel_rect)
+        case BattleState.FIGHT:
+            for i in range(len(back_pokemon.moves)):
+                x = const.PANEL_WIDTH // 4 * (1 if i % 2 == 0 else 3)
+                y = const.SCREEN_HEIGHT - const.PANEL_HEIGHT // 4 * (3 if i // 2 == 0 else 1) - 20
+                util.draw_text(f'{back_pokemon.moves[i]["name"]}', TEXT_FONT, const.BLACK, (x, y), screen, True)
+                util.draw_text(f'{back_pokemon.moves[i]["pp"]}/{back_pokemon.moves[i]["max_pp"]}', TEXT_FONT, const.BLACK, (x, y + 40), screen, True)
+                button_click = move_buttons[i].draw(screen)
+                if button_click[0]:
+                    back_move = back_pokemon.moves[i]
+                    front_move = random.choice(front_pokemon.moves)
+                    if back_move['priority'] > front_move['priority']:
+                        first_move = back_move
+                        first_pokemon = back_pokemon
+                        last_move = front_move
+                        last_pokemon = front_pokemon
+                    elif back_move['priority'] < front_move['priority']:
+                        first_move = back_move
+                        first_pokemon = back_pokemon
+                        last_move = front_move
+                    else:
+                        if back_pokemon.stats['speed'] >= front_pokemon.stats['speed']:
+                            first_move = back_move
+                            first_pokemon = back_pokemon
+                            last_move = front_move
+                            last_pokemon = front_pokemon
+                        else:
+                            first_move = front_move
+                            first_pokemon = front_pokemon
+                            last_move = back_move
+                            last_pokemon = back_pokemon
+                    battle_state = BattleState.ATTACK
+                    attack_state = AttackState.FIRST_ATTACK
+                elif button_click[1]:
+                    attribute_panel.fill(const.WHITE)
+                    util.draw_text(f'Power: {back_pokemon.moves[i]["power"]}', TEXT_FONT, const.BLACK, (20, 20), attribute_panel)
+                    util.draw_text(f'Accuracy: {back_pokemon.moves[i]["accuracy"]}', TEXT_FONT, const.BLACK, (20, 60), attribute_panel)
+                    type_name = util.fetch_json(f'type/{back_pokemon.moves[i]["type"]}.json')['name']
+                    util.draw_text(f'Type: {type_name}', TEXT_FONT, const.BLACK, (20, 100), attribute_panel)
+                    screen.blit(attribute_panel, attribute_panel_rect)
+
+        case BattleState.ATTACK:
+            move_panel.fill(const.WHITE)
+            match attack_state:
+                case AttackState.FIRST_ATTACK:
+                    if first_pokemon.attack_accuracy(first_move, last_pokemon):
+                        attack_state = AttackState.FIRST_ATTACK_HIT
+                        type_effectiveness = first_pokemon.attack(first_move, last_pokemon)
+                    else:
+                        attack_state = AttackState.FIRST_ATTACK_NOT_HIT
+                case AttackState.FIRST_ATTACK_HIT:
+                    util.draw_text(f'{first_pokemon.name} used', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                    util.draw_text(f'{first_move["name"]}', TEXT_FONT, const.BLACK, (20, 60), move_panel)
+                case AttackState.FIRST_EFFECTIVE:
+                    match type_effectiveness:
+                        case 2:
+                            util.draw_text(f"It's super effective!", TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                        case 0.5:
+                            util.draw_text(f"It's not very", TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            util.draw_text(f"effective...", TEXT_FONT, const.BLACK, (20, 60), move_panel)
+                        case 0:
+                            util.draw_text(f"It's not effective...", TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                        case None | 1:
+                            attack_state = AttackState.LAST_ATTACK
+                case AttackState.FIRST_ATTACK_NOT_HIT:
+                    util.draw_text(f'{last_pokemon.name}', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                    util.draw_text(f'avoided the attack', TEXT_FONT, const.BLACK, (20, 60), move_panel)
+                case AttackState.LAST_ATTACK:
+                    if last_pokemon.attack_accuracy(last_move, first_pokemon):
+                        attack_state = AttackState.LAST_ATTACK_HIT
+                        type_effectiveness = last_pokemon.attack(last_move, first_pokemon)
+                    else:
+                        attack_state = AttackState.LAST_ATTACK_NOT_HIT
+                case AttackState.LAST_ATTACK_HIT:
+                    util.draw_text(f'{last_pokemon.name} used', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                    util.draw_text(f'{last_move["name"]}', TEXT_FONT, const.BLACK, (20, 60), move_panel)
+                case AttackState.LAST_EFFECTIVE:
+                    match type_effectiveness:
+                        case 2:
+                            util.draw_text(f"It's super effective!", TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                        case 0.5:
+                            util.draw_text(f"It's not very", TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            util.draw_text(f"effective...", TEXT_FONT, const.BLACK, (20, 60), move_panel)
+                        case 0:
+                            util.draw_text(f"It's not effective...", TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                        case None | 1:
+                            battle_state = BattleState.PREBATTLE
+                case AttackState.LAST_ATTACK_NOT_HIT:
+                    util.draw_text(f'{first_pokemon.name}', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                    util.draw_text(f'avoided the attack', TEXT_FONT, const.BLACK, (20, 60), move_panel)
+            screen.blit(move_panel, move_panel_rect)
 
     for event in pg.event.get():
         if event.type == pg.QUIT:
             run = False
         if event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
             run = False
+        if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
+            match attack_state:
+                case AttackState.FIRST_ATTACK_HIT:
+                    attack_state = AttackState.FIRST_EFFECTIVE
+                case AttackState.FIRST_EFFECTIVE:
+                    attack_state = AttackState.LAST_ATTACK
+                case AttackState.FIRST_ATTACK_NOT_HIT:
+                    attack_state = AttackState.LAST_ATTACK
+                case AttackState.LAST_ATTACK_HIT:
+                    attack_state = AttackState.LAST_EFFECTIVE
+                case AttackState.FIRST_EFFECTIVE:
+                    battle_state = BattleState.PREBATTLE
+                case AttackState.LAST_ATTACK_NOT_HIT:
+                    battle_state = BattleState.PREBATTLE
 
     pg.display.flip()
