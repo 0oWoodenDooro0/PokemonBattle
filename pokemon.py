@@ -41,18 +41,18 @@ class Pokemon:
         self.basic_points = {}
         self.stats_effect = {}
         for stat in self.data['stats']:
-            stat_name = stat['stat']['name']
-            self.basic_stats[stat_name] = stat['base_stat']
-            self.basic_points[stat_name] = 0
-            self.stats_effect[stat_name] = 0
-        self.stats_effect['accuracy'] = 0
-        self.stats_effect['evasion'] = 0
+            stat_id = util.url_to_id(stat['stat']['url'], 'https://pokeapi.co/api/v2/stat/')
+            self.basic_stats[stat_id] = stat['base_stat']
+            self.basic_points[stat_id] = 0
+            self.stats_effect[stat_id] = 0
+        self.stats_effect[7] = 0
+        self.stats_effect[8] = 0
 
         self.individual_level = self.get_individual_level()
 
         self.stats = self.get_stat()
 
-        self.hp = self.stats['hp']
+        self.hp = self.stats[1]
 
         all_moves: list = self.data['moves']
         self.moves = []
@@ -71,46 +71,48 @@ class Pokemon:
                     'priority': data['priority'],
                     'power': data['power'],
                     'crit_rate': data['meta']['crit_rate'],
+                    'stat_changes': [{'stat': util.url_to_id(x['stat']['url'], 'https://pokeapi.co/api/v2/stat/'), 'change': x['change']} for x in data['stat_changes']],
                     'type': util.url_to_id(data['type']['url'], 'https://pokeapi.co/api/v2/type/'),
-                    'damage_class': util.url_to_id(data['damage_class']['url'], 'https://pokeapi.co/api/v2/move-damage-class/')
+                    'damage_class': util.url_to_id(data['damage_class']['url'], 'https://pokeapi.co/api/v2/move-damage-class/'),
+                    'move_target': util.url_to_id(data['target']['url'], 'https://pokeapi.co/api/v2/move-target/')
                 }
                 self.moves.append(move_data)
 
         if self.front:
-            self.health_bar = HealthBar(const.POKEMON_IMAGE_SIZE // 2, const.POKEMON_IMAGE_SIZE // 4, 200, 20, self.stats["hp"])
+            self.health_bar = HealthBar(const.POKEMON_IMAGE_SIZE // 2, const.POKEMON_IMAGE_SIZE // 4, 200, 20, self.stats[1])
         else:
             self.health_bar = HealthBar(const.SCREEN_WIDTH - const.POKEMON_IMAGE_SIZE // 2, const.SCREEN_HEIGHT - const.PANEL_HEIGHT - const.POKEMON_IMAGE_SIZE // 4, 200, 20,
-                                        self.stats["hp"])
+                                        self.stats[1])
 
     @staticmethod
     def get_individual_level() -> dict:
         return {
-            'hp': random.randint(0, 31),
-            'attack': random.randint(0, 31),
-            'defense': random.randint(0, 31),
-            'speed': random.randint(0, 31),
-            'special-attack': random.randint(0, 31),
-            'special-defense': random.randint(0, 31)
+            1: random.randint(0, 31),
+            2: random.randint(0, 31),
+            3: random.randint(0, 31),
+            4: random.randint(0, 31),
+            5: random.randint(0, 31),
+            6: random.randint(0, 31)
         }
 
     def get_stat(self) -> dict:
         return {
-            'hp': self.get_hp(),
-            'attack': self.get_other_ability('attack'),
-            'defense': self.get_other_ability('defense'),
-            'speed': self.get_other_ability('speed'),
-            'special_attack': self.get_other_ability('special-attack'),
-            'special_defense': self.get_other_ability('special-defense'),
+            1: self.get_hp(),
+            2: self.get_other_ability(2),
+            3: self.get_other_ability(3),
+            4: self.get_other_ability(4),
+            5: self.get_other_ability(5),
+            6: self.get_other_ability(6),
         }
 
     def get_hp(self) -> int:
-        return math.floor(math.ceil(self.basic_stats['hp'] + self.individual_level['hp'] + math.sqrt(self.basic_points['hp']) / 8) * self.level / 50 + 10 + self.level)
+        return math.floor(math.ceil(self.basic_stats[1] + self.individual_level[1] + math.sqrt(self.basic_points[1]) / 8) * self.level / 50 + 10 + self.level)
 
-    def get_other_ability(self, stat: str, character: int = 1) -> int:
-        return math.floor(math.ceil(self.basic_stats[stat] + self.individual_level[stat] + math.sqrt(self.basic_points[stat]) / 8) * self.level / 50 + 5)
+    def get_other_ability(self, stat_id: int) -> int:
+        return math.floor(math.ceil(self.basic_stats[stat_id] + self.individual_level[stat_id] + math.sqrt(self.basic_points[stat_id]) / 8) * self.level / 50 + 5)
 
-    def get_stat_effect(self, stat: str):
-        level = self.stats_effect[stat]
+    def get_stat_effect(self, stat_id: int):
+        level = self.stats_effect[stat_id]
         if level > 0:
             return math.floor((level + 2) / 2 * 100)
         elif level < 0:
@@ -133,19 +135,22 @@ class Pokemon:
     def draw(self, screen: pg.Surface):
         self.health_bar.draw(screen)
         screen.blit(self.sprite, self.sprite_rect)
+        if self.hp < 0:
+            self.hp = 0
         self.health_bar.update(self.hp)
 
     def attack(self, move: dict, defender_pokemon: 'Pokemon'):
-        if move['power']:
+        type_effectiveness: int | float | list | None = None
+        if move['damage_class'] != 1:
             if move['crit_rate'] > 0:
-                crit = self.basic_stats['speed'] / 2
+                crit = self.basic_stats[6] / 2
             else:
-                crit = self.basic_stats['speed'] * 4
+                crit = self.basic_stats[6] * 4
             r = random.randint(1, 256)
             critical = 1 if r > crit else 2
             power = move['power']
-            attack = self.stats['attack'] if move['damage_class'] == 2 else self.stats['special-attack'] if move['damage_class'] == 3 else 0
-            defense = defender_pokemon.stats['defense'] if move['damage_class'] == 2 else defender_pokemon.stats['special-attack'] if move['damage_class'] == 3 else 0
+            attack = self.stats[2] if move['damage_class'] == 2 else self.stats[4] if move['damage_class'] == 3 else 0
+            defense = defender_pokemon.stats[3] if move['damage_class'] == 2 else defender_pokemon.stats[5] if move['damage_class'] == 3 else 0
             move_type = move['type']
             stab = 1.5 if move_type in self.types else 1
             damage = (((2 * self.level * critical) / 5 + 2) * power * attack / defense / 50 + 2) * stab
@@ -163,14 +168,48 @@ class Pokemon:
                     type_effectiveness = type_effectiveness * 0
             damage = 1 if math.floor(damage) <= 1 else math.floor(damage * random.randint(217, 255) / 255)
             defender_pokemon.hp -= damage
-            return type_effectiveness
-        else:
-            return None
+        stat_change_list = []
+        if move['damage_class'] == 1:
+            for i in range(len(move['stat_changes'])):
+                target_pokemon: Pokemon | None = None
+                match move['move_target']:
+                    case 10 | 11:
+                        target_pokemon = defender_pokemon
+                    case 7:
+                        target_pokemon = self
+                    case _:
+                        print(move['move_target'])
+                stat_change = 0
+                if move['stat_changes'][i]['change'] > 0 and target_pokemon.stats_effect[move['stat_changes'][i]['stat']] == 6:
+                    stat_change = 9
+                elif move['stat_changes'][i]['change'] < 0 and target_pokemon.stats_effect[move['stat_changes'][i]['stat']] == -6:
+                    stat_change = 10
+                elif target_pokemon.stats_effect[move['stat_changes'][i]['stat']] + move['stat_changes'][i]['change'] >= 6:
+                    stat_change = 4
+                else:
+                    match move['stat_changes'][i]['change']:
+                        case 1:
+                            stat_change = 1
+                        case 2:
+                            stat_change = 2
+                        case 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11:
+                            stat_change = 3
+                        case -1:
+                            stat_change = 6
+                        case -2:
+                            stat_change = 7
+                        case -3 | -4 | -5 | -6 | -7 | -8 | -9 | -10 | -11:
+                            stat_change = 8
+                        case _:
+                            print(move['stat_changes'])
+                stat_name = util.fetch_json(f'stat/{move["stat_changes"][i]["stat"]}.json')
+                stat_change_list.append((target_pokemon, stat_name['name'], stat_change))
+        return type_effectiveness, stat_change_list
 
     def attack_accuracy(self, move: dict, defender_pokemon: 'Pokemon'):
         b = math.floor(move['accuracy'] * 255 / 100)
-        c = self.get_stat_effect('accuracy')
-        d = defender_pokemon.get_stat_effect('evasion')
+        c = self.get_stat_effect(7)
+        d = defender_pokemon.get_stat_effect(8)
         a = b * c / d
         r = random.randint(1, 255)
         return True if r < a else False

@@ -1,4 +1,5 @@
 import random
+from pprint import pprint
 
 import pygame as pg
 
@@ -79,6 +80,8 @@ first_pokemon: Pokemon | None = None
 last_move: dict | None = None
 last_pokemon: Pokemon | None = None
 type_effectiveness: int | float | None = None
+stat_change_list: list | None = None
+stat_change_num: int = 0
 
 run = True
 while run:
@@ -95,9 +98,9 @@ while run:
     util.draw_text(f'Lv {front_pokemon.level}', TEXT_FONT, const.BLACK, (const.FRONT_VALUE_POS[0] + 70, const.FRONT_VALUE_POS[1] - 40), screen, True)
     util.draw_text(back_pokemon.name, TEXT_FONT, const.BLACK, (const.BACK_VALUE_POS[0] - 80 + 64, const.BACK_VALUE_POS[1] - 40), screen, True)
     util.draw_text(f'Lv {back_pokemon.level}', TEXT_FONT, const.BLACK, (const.BACK_VALUE_POS[0] + 70 + 64, const.BACK_VALUE_POS[1] - 40), screen, True)
-    util.draw_text(f'{back_pokemon.hp}/{back_pokemon.stats["hp"]}', TEXT_FONT, const.BLACK, (const.BACK_VALUE_POS[0] + 70, const.BACK_VALUE_POS[1] + 40), screen, True)
+    util.draw_text(f'{back_pokemon.hp}/{back_pokemon.stats[1]}', TEXT_FONT, const.BLACK, (const.BACK_VALUE_POS[0] + 70, const.BACK_VALUE_POS[1] + 40), screen, True)
 
-    if fight_button.draw(screen):
+    if fight_button.draw(screen) and battle_state != BattleState.ATTACK:
         battle_state = BattleState.FIGHT
     if bag_button.draw(screen):
         pass
@@ -131,7 +134,7 @@ while run:
                         first_pokemon = back_pokemon
                         last_move = front_move
                     else:
-                        if back_pokemon.stats['speed'] >= front_pokemon.stats['speed']:
+                        if back_pokemon.stats[6] >= front_pokemon.stats[6]:
                             first_move = back_move
                             first_pokemon = back_pokemon
                             last_move = front_move
@@ -157,7 +160,9 @@ while run:
                 case AttackState.FIRST_ATTACK:
                     if first_pokemon.attack_accuracy(first_move, last_pokemon):
                         attack_state = AttackState.FIRST_ATTACK_HIT
-                        type_effectiveness = first_pokemon.attack(first_move, last_pokemon)
+                        type_effectiveness, stat_change_list = first_pokemon.attack(first_move, last_pokemon)
+                        if stat_change_list:
+                            stat_change_num = len(stat_change_list)
                     else:
                         attack_state = AttackState.FIRST_ATTACK_NOT_HIT
                 case AttackState.FIRST_ATTACK_HIT:
@@ -169,18 +174,44 @@ while run:
                             util.draw_text(f"It's super effective!", TEXT_FONT, const.BLACK, (20, 20), move_panel)
                         case 0.5:
                             util.draw_text(f"It's not very", TEXT_FONT, const.BLACK, (20, 20), move_panel)
-                            util.draw_text(f"effective...", TEXT_FONT, const.BLACK, (20, 60), move_panel)
+                            util.draw_text(f'effective...', TEXT_FONT, const.BLACK, (20, 60), move_panel)
                         case 0:
                             util.draw_text(f"It's not effective...", TEXT_FONT, const.BLACK, (20, 20), move_panel)
-                        case None | 1:
-                            attack_state = AttackState.LAST_ATTACK
+                        case 1 | None:
+                            attack_state = AttackState.FIRST_STAT_CHANGE
+                case AttackState.FIRST_STAT_CHANGE:
+                    if stat_change_num == 0 or not stat_change_list:
+                        attack_state = AttackState.LAST_ATTACK
+                    else:
+                        match stat_change_list[stat_change_num - 1]:
+                            case (target_pokemon, stat_name, 1):
+                                util.draw_text(f'{target_pokemon.name} {stat_name} rose!', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            case (target_pokemon, stat_name, 2):
+                                util.draw_text(f'{target_pokemon.name} {stat_name} rose sharply!', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            case (target_pokemon, stat_name, 3):
+                                util.draw_text(f'{target_pokemon.name} {stat_name} rose drastically!', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            case (target_pokemon, stat_name, 4):
+                                util.draw_text(f'{target_pokemon.name} maxed its {stat_name}!', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            case (target_pokemon, stat_name, 6):
+                                util.draw_text(f'{target_pokemon.name} {stat_name} fell!', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            case (target_pokemon, stat_name, 7):
+                                util.draw_text(f'{target_pokemon.name} {stat_name} harshly fell!', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            case (target_pokemon, stat_name, 8):
+                                util.draw_text(f'{target_pokemon.name} {stat_name} severely fell!', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            case (target_pokemon, stat_name, 9):
+                                util.draw_text(f"{target_pokemon.name} {stat_name} won't go any higher!", TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            case (target_pokemon, stat_name, 10):
+                                util.draw_text(f"{target_pokemon.name} {stat_name} won't go any lower!", TEXT_FONT, const.BLACK, (20, 20), move_panel)
+
                 case AttackState.FIRST_ATTACK_NOT_HIT:
                     util.draw_text(f'{last_pokemon.name}', TEXT_FONT, const.BLACK, (20, 20), move_panel)
                     util.draw_text(f'avoided the attack', TEXT_FONT, const.BLACK, (20, 60), move_panel)
                 case AttackState.LAST_ATTACK:
                     if last_pokemon.attack_accuracy(last_move, first_pokemon):
                         attack_state = AttackState.LAST_ATTACK_HIT
-                        type_effectiveness = last_pokemon.attack(last_move, first_pokemon)
+                        type_effectiveness, stat_change_list = last_pokemon.attack(last_move, first_pokemon)
+                        if stat_change_list:
+                            stat_change_num = len(stat_change_list)
                     else:
                         attack_state = AttackState.LAST_ATTACK_NOT_HIT
                 case AttackState.LAST_ATTACK_HIT:
@@ -195,11 +226,35 @@ while run:
                             util.draw_text(f"effective...", TEXT_FONT, const.BLACK, (20, 60), move_panel)
                         case 0:
                             util.draw_text(f"It's not effective...", TEXT_FONT, const.BLACK, (20, 20), move_panel)
-                        case None | 1:
-                            battle_state = BattleState.PREBATTLE
+                        case 1 | None:
+                            attack_state = AttackState.LAST_STAT_CHANGE
                 case AttackState.LAST_ATTACK_NOT_HIT:
                     util.draw_text(f'{first_pokemon.name}', TEXT_FONT, const.BLACK, (20, 20), move_panel)
                     util.draw_text(f'avoided the attack', TEXT_FONT, const.BLACK, (20, 60), move_panel)
+                case AttackState.LAST_STAT_CHANGE:
+                    if stat_change_num == 0 or not stat_change_list:
+                        battle_state = BattleState.PREBATTLE
+                    else:
+                        match stat_change_list[stat_change_num - 1]:
+                            case (target_pokemon, stat_name, 1):
+                                util.draw_text(f'{target_pokemon.name} {stat_name} rose!', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            case (target_pokemon, stat_name, 2):
+                                util.draw_text(f'{target_pokemon.name} {stat_name} rose sharply!', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            case (target_pokemon, stat_name, 3):
+                                util.draw_text(f'{target_pokemon.name} {stat_name} rose drastically!', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            case (target_pokemon, stat_name, 4):
+                                util.draw_text(f'{target_pokemon.name} maxed its {stat_name}!', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            case (target_pokemon, stat_name, 6):
+                                util.draw_text(f'{target_pokemon.name} {stat_name} fell!', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            case (target_pokemon, stat_name, 7):
+                                util.draw_text(f'{target_pokemon.name} {stat_name} harshly fell!', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            case (target_pokemon, stat_name, 8):
+                                util.draw_text(f'{target_pokemon.name} {stat_name} severely fell!', TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            case (target_pokemon, stat_name, 9):
+                                util.draw_text(f"{target_pokemon.name} {stat_name} won't go any higher!", TEXT_FONT, const.BLACK, (20, 20), move_panel)
+                            case (target_pokemon, stat_name, 10):
+                                util.draw_text(f"{target_pokemon.name} {stat_name} won't go any lower!", TEXT_FONT, const.BLACK, (20, 20), move_panel)
+
             screen.blit(move_panel, move_panel_rect)
 
     for event in pg.event.get():
@@ -217,9 +272,11 @@ while run:
                     attack_state = AttackState.LAST_ATTACK
                 case AttackState.LAST_ATTACK_HIT:
                     attack_state = AttackState.LAST_EFFECTIVE
-                case AttackState.FIRST_EFFECTIVE:
+                case AttackState.LAST_EFFECTIVE:
                     battle_state = BattleState.PREBATTLE
                 case AttackState.LAST_ATTACK_NOT_HIT:
                     battle_state = BattleState.PREBATTLE
+                case AttackState.FIRST_STAT_CHANGE | AttackState.LAST_STAT_CHANGE:
+                    stat_change_num -= 1
 
     pg.display.flip()
