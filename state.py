@@ -3,6 +3,7 @@ from enum import Enum, auto
 
 class BattleState(Enum):
     PREBATTLE = auto()
+    SELECTION = auto()
     FIGHT = auto()
     ATTACK = auto()
     DEFEAT = auto()

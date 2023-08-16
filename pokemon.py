@@ -149,13 +149,15 @@ class Pokemon:
         self.sprite = pg.transform.scale(self.sprite, (300, 300))
         self.sprite_rect = self.sprite.get_rect()
         if self.enemy:
-            self.sprite_rect.topright = (const.SCREEN_WIDTH, - const.POKEMON_IMAGE_SIZE // 4)
+            self.sprite_rect.topright = (0, - const.POKEMON_IMAGE_SIZE // 4)
         else:
-            self.sprite_rect.bottomleft = (0, const.SCREEN_HEIGHT - const.PANEL_HEIGHT + const.POKEMON_IMAGE_SIZE // 4)
+            self.sprite_rect.bottomleft = (const.SCREEN_WIDTH, const.SCREEN_HEIGHT - const.PANEL_HEIGHT + const.POKEMON_IMAGE_SIZE // 4)
 
     def draw(self, screen: pg.Surface):
-        self.health_bar.draw(screen)
         screen.blit(self.sprite, self.sprite_rect)
+
+    def draw_health_bar(self, screen):
+        self.health_bar.draw(screen)
         if self.hp < 0:
             self.hp = 0
         self.health_bar.update(self.hp)
@@ -252,6 +254,6 @@ class Pokemon:
     def check_experience_to_level_up(self):
         if self.level == 100:
             return
-        if self.experience < self.levels[self.level + 1]['experience']:
+        if self.experience >= self.levels[self.level + 1]['experience']:
             self.level += 1
             self.check_experience_to_level_up()
