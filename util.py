@@ -1,5 +1,9 @@
+import math
+
 import pygame as pg
 import json
+
+from pokemon import Pokemon
 
 
 def draw_text(text: str, font, text_color, pos, surface: pg.Surface, center=False):
@@ -26,3 +30,7 @@ def type_in_pokemon(data: list, pokemon_type: int):
         if int(url_to_id(t['url'], 'https://pokeapi.co/api/v2/type/')) == pokemon_type:
             return True
     return False
+
+
+def get_battle_experience(defender_pokemon: Pokemon):
+    return math.floor(defender_pokemon.base_experience * defender_pokemon.level / 7)
