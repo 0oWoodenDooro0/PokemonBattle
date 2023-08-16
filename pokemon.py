@@ -204,6 +204,7 @@ class Pokemon:
                             print(move['stat_changes'])
                 stat_name = util.fetch_json(f'stat/{move["stat_changes"][i]["stat"]}.json')
                 stat_change_list.append((target_pokemon, stat_name['name'], stat_change))
+        move['pp'] -= 1
         return type_effectiveness, stat_change_list
 
     def attack_accuracy(self, move: dict, defender_pokemon: 'Pokemon'):

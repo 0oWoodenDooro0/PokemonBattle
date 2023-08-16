@@ -13,6 +13,7 @@ TITLE = "Pokemon Battle"
 FPS = 60
 
 pg.init()
+pg.mixer.init()
 
 clock = pg.time.Clock()
 
@@ -83,6 +84,10 @@ type_effectiveness: int | float | None = None
 stat_change_list: list | None = None
 stat_change_num: int = 0
 
+pg.mixer.music.load('soundtrack/Wild Battle Music EXTENDED (128 kbps).mp3')
+pg.mixer.music.set_volume(0.1)
+pg.mixer.music.play(loops=-1)
+
 run = True
 while run:
     clock.tick(FPS)
@@ -110,6 +115,7 @@ while run:
         run = False
 
     match battle_state:
+
         case BattleState.PREBATTLE:
             util.draw_text('What will', TEXT_FONT, const.BLACK, (20, const.SCREEN_HEIGHT - const.PANEL_HEIGHT + 20), screen)
             util.draw_text(f'{back_pokemon.name} do?', TEXT_FONT, const.BLACK, (20, const.SCREEN_HEIGHT - const.PANEL_HEIGHT + 60), screen)
@@ -121,7 +127,7 @@ while run:
                 util.draw_text(f'{back_pokemon.moves[i]["name"]}', TEXT_FONT, const.BLACK, (x, y), screen, True)
                 util.draw_text(f'{back_pokemon.moves[i]["pp"]}/{back_pokemon.moves[i]["max_pp"]}', TEXT_FONT, const.BLACK, (x, y + 40), screen, True)
                 button_click = move_buttons[i].draw(screen)
-                if button_click[0]:
+                if button_click[0] and back_pokemon.moves[i]['pp'] != 0:
                     back_move = back_pokemon.moves[i]
                     front_move = random.choice(front_pokemon.moves)
                     if back_move['priority'] > front_move['priority']:
