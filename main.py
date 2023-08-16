@@ -90,6 +90,7 @@ pg.mixer.music.load('soundtrack/Wild Battle Music EXTENDED (128 kbps).mp3')
 pg.mixer.music.set_volume(0.1)
 pg.mixer.music.play(loops=-1)
 
+button_select_sound = pg.mixer.Sound('sound_effect/Button Select Sound Effect (128 kbps).wav')
 
 run = True
 while run:
@@ -118,6 +119,7 @@ while run:
             y = const.PANEL_HEIGHT // 4 * (1 if i // 2 == 0 else 3)
             util.draw_text(selection_button_texts[i], TEXT_FONT, const.BLACK, (x, y), attribute_panel, center=True)
             if selection_buttons[i].draw(screen) and battle_state != BattleState.ATTACK:
+                button_select_sound.play()
                 match i:
                     case 0:
                         battle_state = BattleState.FIGHT
@@ -154,6 +156,7 @@ while run:
                 util.draw_text(f'{back_pokemon.moves[i]["pp"]}/{back_pokemon.moves[i]["max_pp"]}', TEXT_FONT, const.BLACK, (x, y + 40), move_panel, True)
                 button_click = move_buttons[i].draw(screen)
                 if button_click[0] and back_pokemon.moves[i]['pp'] != 0:
+                    button_select_sound.play()
                     back_move = back_pokemon.moves[i]
                     front_move = random.choice(front_pokemon.moves)
                     if back_move['priority'] > front_move['priority']:
