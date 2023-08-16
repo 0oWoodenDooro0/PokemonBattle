@@ -6,10 +6,13 @@ import json
 from pokemon import Pokemon
 
 
-def draw_text(text: str, font, text_color, pos, surface: pg.Surface, center=False):
+def draw_text(text: str, font: pg.font.Font, text_color: pg.Color, pos: tuple[int, int], surface: pg.Surface, center: bool = False, mid_left: bool = False):
     img = font.render(text, True, text_color)
     if center:
         img_rect = img.get_rect(center=pos)
+        surface.blit(img, img_rect)
+    elif mid_left:
+        img_rect = img.get_rect(midleft=pos)
         surface.blit(img, img_rect)
     else:
         surface.blit(img, pos)

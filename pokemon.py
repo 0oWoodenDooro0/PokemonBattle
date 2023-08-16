@@ -29,7 +29,7 @@ class Pokemon:
         self.pokemon_species: int | None = None
         self.base_experience: int | None = None
         self.experience: int = 0
-        self.level: int = 100
+        self.level: int = 1
         self.levels: list | None = None
         self.health_bar: HealthBar | None = None
         self.set_sprite()
@@ -37,7 +37,7 @@ class Pokemon:
 
     def set_pokemon_data(self):
         self.pokemon_id = self.data['id']
-        self.name = self.data['name']
+        self.name = self.data['name'].capitalize()
 
         self.types = [util.url_to_id(x['type']['url'], 'https://pokeapi.co/api/v2/type/') for x in self.data['types']]
 
@@ -67,7 +67,7 @@ class Pokemon:
                 data = util.fetch_json(f'move/{move_id}.json')
                 move_data = {
                     'id': data['id'],
-                    'name': data['name'],
+                    'name': data['name'].capitalize(),
                     'accuracy': data['accuracy'],
                     'effect_chance': data['effect_chance'],
                     'max_pp': data['pp'],

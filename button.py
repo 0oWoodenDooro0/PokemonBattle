@@ -2,15 +2,14 @@ import pygame as pg
 
 
 class Button:
-    def __init__(self, x, y, image, single_click=True, check_mouse_on=False, center=False):
+    def __init__(self, pos: tuple[int, int], image: pg.Surface, single_click: bool = True, check_mouse_on: bool = False, center: bool = False):
         self.image = image
         self.rect: pg.rect.Rect = self.image.get_rect()
-        self.x = x
-        self.y = y
+        self.pos = pos
         if center:
-            self.rect.center = (x, y)
+            self.rect.center = pos
         else:
-            self.rect.topleft = (x, y)
+            self.rect.topleft = pos
         self.clicked = True
         self.single_click = single_click
         self.check_mouse_on = check_mouse_on
@@ -38,11 +37,11 @@ class Button:
     def change_image(self, image):
         self.image = image
         self.rect = self.image.get_rect()
-        self.rect.topleft = (self.x, self.y)
+        self.rect.topleft = self.pos
 
-    def change_pos(self, x, y, center=False):
+    def change_pos(self, pos, center=False):
         self.rect = self.image.get_rect()
         if center:
-            self.rect.center = (x, y)
+            self.rect.center = pos
         else:
-            self.rect.topleft = (x, y)
+            self.rect.topleft = pos
