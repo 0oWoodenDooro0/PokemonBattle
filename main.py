@@ -24,11 +24,6 @@ pg.display.set_caption(TITLE)
 TEXT_FONT = pg.font.Font(os.path.join('assets', 'pokemon_pixel_font.ttf'), 40)
 MESSAGE_FONT = pg.font.Font(os.path.join('assets', 'pokemon_pixel_font.ttf'), 60)
 
-panel = pg.Surface((const.SCREEN_WIDTH, const.PANEL_HEIGHT))
-panel.fill(const.WHITE)
-pg.draw.line(panel, const.BLACK, (0, 0), (const.SCREEN_WIDTH, 0), 2)
-panel_rect = panel.get_rect()
-panel_rect.topleft = (0, const.SCREEN_HEIGHT - const.PANEL_HEIGHT)
 front_value_image = pg.image.load(os.path.join('assets', 'image', 'front_value.png')).convert_alpha()
 back_value_image = pg.image.load(os.path.join('assets', 'image', 'back_value.png')).convert_alpha()
 front_value_image_rect = front_value_image.get_rect()
@@ -36,20 +31,20 @@ back_value_image_rect = back_value_image.get_rect()
 front_value_image_rect.center = const.FRONT_VALUE_POS
 back_value_image_rect.center = const.BACK_VALUE_POS
 
-attribute_panel = pg.Surface((const.SCREEN_WIDTH - const.PANEL_WIDTH - 4, const.PANEL_HEIGHT - 4))
+attribute_panel = pg.Surface((const.SCREEN_WIDTH - const.PANEL_WIDTH, const.PANEL_HEIGHT))
 attribute_panel.fill(const.WHITE)
 attribute_panel_rect = attribute_panel.get_rect()
-attribute_panel_rect.topleft = (const.PANEL_WIDTH + 2, const.SCREEN_HEIGHT - const.PANEL_HEIGHT + 2)
+attribute_panel_rect.topleft = (const.PANEL_WIDTH, const.SCREEN_HEIGHT - const.PANEL_HEIGHT)
 
-move_panel = pg.Surface((const.PANEL_WIDTH - 4, const.PANEL_HEIGHT - 4))
+move_panel = pg.Surface((const.PANEL_WIDTH, const.PANEL_HEIGHT))
 move_panel.fill(const.WHITE)
 move_panel_rect = move_panel.get_rect()
-move_panel_rect.topleft = (0, const.SCREEN_HEIGHT - const.PANEL_HEIGHT + 2)
+move_panel_rect.topleft = (0, const.SCREEN_HEIGHT - const.PANEL_HEIGHT)
 
-data = util.fetch_json('pokemon', 'pokemon3')
+data = util.fetch_json('pokemon', '100')
 front_pokemon = Pokemon(data, enemy=True)
 
-data = util.fetch_json('pokemon', 'pokemon2')
+data = util.fetch_json('pokemon', '150')
 back_pokemon = Pokemon(data)
 
 selection_image = pg.image.load(os.path.join('assets', 'button', 'selection_button.png')).convert_alpha()
@@ -98,8 +93,6 @@ while run:
     screen.fill(const.GREY)
     move_panel.fill(const.WHITE)
     attribute_panel.fill(const.WHITE)
-
-    screen.blit(panel, panel_rect)
 
     if battle_state is not BattleState.PREBATTLE:
         screen.blit(back_value_image, back_value_image_rect)
@@ -187,7 +180,7 @@ while run:
                     attribute_panel.fill(const.WHITE)
                     util.draw_text(f'Power: {back_pokemon.moves[i]["power"]}', TEXT_FONT, const.BLACK, (20, 20), attribute_panel)
                     util.draw_text(f'Accuracy: {back_pokemon.moves[i]["accuracy"]}', TEXT_FONT, const.BLACK, (20, 60), attribute_panel)
-                    type_name = util.fetch_json('type', str(back_pokemon.moves[i]["type"]))['name']
+                    type_name = util.fetch_json('type', str(back_pokemon.moves[i]["type"]))['name'].capitalize()
                     util.draw_text(f'Type: {type_name}', TEXT_FONT, const.BLACK, (20, 100), attribute_panel)
 
         case BattleState.DEFEAT:
@@ -387,7 +380,11 @@ while run:
                     util.draw_text(f'{isEnemy}{first_pokemon.name}', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
                     util.draw_text(f'avoided the attack', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
 
+    pg.draw.line(move_panel, const.BLACK, (0, 0), (const.PANEL_WIDTH, 0), 2)
+    pg.draw.line(move_panel, const.BLACK, (0, 0), (0, const.PANEL_HEIGHT), 2)
     screen.blit(move_panel, move_panel_rect)
+    pg.draw.line(attribute_panel, const.BLACK, (0, 0), (const.SCREEN_WIDTH - const.PANEL_WIDTH, 0), 2)
+    pg.draw.line(attribute_panel, const.BLACK, (0, 0), (0, const.PANEL_HEIGHT), 2)
     screen.blit(attribute_panel, attribute_panel_rect)
 
     for event in pg.event.get():

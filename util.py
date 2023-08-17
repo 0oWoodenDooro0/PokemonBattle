@@ -4,6 +4,8 @@ import os.path
 import pygame as pg
 import json
 
+import requests as requests
+
 from pokemon import Pokemon
 
 
@@ -21,6 +23,11 @@ def draw_text(text: str, font: pg.font.Font, text_color: pg.Color, pos: tuple[in
 
 def fetch_json(directory: str, file_name: str):
     path = os.path.join(directory, f'{file_name}.json')
+    if not os.path.isfile(path):
+        url = f'https://pokeapi.co/api/v2/{directory}/{file_name}'
+        json_data = requests.get(url).json()
+        with open(path, 'w') as file:
+            json.dump(json_data, file)
     with open(path) as f:
         data = json.load(f)
         return data
