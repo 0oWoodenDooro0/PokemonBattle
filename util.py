@@ -36,12 +36,12 @@ def fetch_json(directory: str, file_name: str):
 
 
 def url_to_id(url: str, prefix: str):
-    return int(url.removeprefix(prefix).removesuffix('/'))
+    return int(url.removeprefix(f'https://pokeapi.co/api/v2/{prefix}/').removesuffix('/'))
 
 
 def type_in_pokemon(data: list, pokemon_type: int):
     for d in data:
-        if int(url_to_id(d['url'], 'https://pokeapi.co/api/v2/type/')) == pokemon_type:
+        if int(url_to_id(d['url'], 'type')) == pokemon_type:
             return True
     return False
 

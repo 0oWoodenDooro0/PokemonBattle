@@ -7,16 +7,18 @@ import pygame as pg
 
 import constants as const
 import util
+from generation import Generation
 from health_bar import HealthBar
 
 
 class Pokemon:
-    def __init__(self, data: dict, enemy: bool = False):
-        self.data: dict = data
+    def __init__(self, pokemon_id: int, generation: Generation, enemy: bool = False):
+        self.generation = generation
+        self.id: int = pokemon_id
+        self.data: dict = util.fetch_json('pokemon', str(pokemon_id))
         self.enemy: bool = enemy
         self.sprite: pg.Surface | None = None
         self.sprite_rect: pg.Rect | None = None
-        self.pokemon_id: int | None = None
         self.name: str | None = None
         self.basic_stats: dict | None = None
         self.individual_level: dict | None = None
@@ -36,16 +38,15 @@ class Pokemon:
         self.set_pokemon_data()
 
     def set_pokemon_data(self):
-        self.pokemon_id = self.data['id']
         self.name = self.data['name'].capitalize()
 
-        self.types = [util.url_to_id(x['type']['url'], 'https://pokeapi.co/api/v2/type/') for x in self.data['types']]
+        self.types = [util.url_to_id(x['type']['url'], 'type') for x in self.data['types']]
 
         self.basic_stats = {}
         self.basic_points = {}
         self.stats_effect = {}
         for stat in self.data['stats']:
-            stat_id = util.url_to_id(stat['stat']['url'], 'https://pokeapi.co/api/v2/stat/')
+            stat_id = util.url_to_id(stat['stat']['url'], 'stat')
             self.basic_stats[stat_id] = stat['base_stat']
             self.basic_points[stat_id] = 0
             self.stats_effect[stat_id] = 0
@@ -61,28 +62,29 @@ class Pokemon:
         all_moves: list = self.data['moves']
         self.moves = []
         for move in all_moves:
-            if move['version_group_details'][-1]['level_learned_at'] == 1 and move['version_group_details'][-1]['move_learn_method']['name'] == 'level-up' and \
-                    move['version_group_details'][0]['version_group']['name'] == 'red-blue':
-                move_id = util.url_to_id(move['move']['url'], 'https://pokeapi.co/api/v2/move/')
-                data = util.fetch_json('move', str(move_id))
-                move_data = {
-                    'id': data['id'],
-                    'name': data['name'].capitalize(),
-                    'accuracy': data['accuracy'],
-                    'effect_chance': data['effect_chance'],
-                    'max_pp': data['pp'],
-                    'pp': data['pp'],
-                    'priority': data['priority'],
-                    'power': data['power'],
-                    'crit_rate': data['meta']['crit_rate'],
-                    'stat_changes': [{'stat': util.url_to_id(x['stat']['url'], 'https://pokeapi.co/api/v2/stat/'), 'change': x['change']} for x in data['stat_changes']],
-                    'type': util.url_to_id(data['type']['url'], 'https://pokeapi.co/api/v2/type/'),
-                    'damage_class': util.url_to_id(data['damage_class']['url'], 'https://pokeapi.co/api/v2/move-damage-class/'),
-                    'move_target': util.url_to_id(data['target']['url'], 'https://pokeapi.co/api/v2/move-target/')
-                }
-                self.moves.append(move_data)
+            move_id = util.url_to_id(move['move']['url'], 'move')
+            if move_id in self.generation.moves and len(self.moves) < 4:
+                if move['version_group_details'][-1]['level_learned_at'] <= self.level and move['version_group_details'][-1]['move_learn_method']['name'] == 'level-up':
+                    move_id = util.url_to_id(move['move']['url'], 'move')
+                    data = util.fetch_json('move', str(move_id))
+                    move_data = {
+                        'id': data['id'],
+                        'name': data['name'].capitalize(),
+                        'accuracy': data['accuracy'],
+                        'effect_chance': data['effect_chance'],
+                        'max_pp': data['pp'],
+                        'pp': data['pp'],
+                        'priority': data['priority'],
+                        'power': data['power'],
+                        'crit_rate': data['meta']['crit_rate'],
+                        'stat_changes': [{'stat': util.url_to_id(x['stat']['url'], 'stat'), 'change': x['change']} for x in data['stat_changes']],
+                        'type': util.url_to_id(data['type']['url'], 'type'),
+                        'damage_class': util.url_to_id(data['damage_class']['url'], 'move-damage-class'),
+                        'move_target': util.url_to_id(data['target']['url'], 'move-target')
+                    }
+                    self.moves.append(move_data)
 
-        self.pokemon_species = util.url_to_id(self.data['species']['url'], 'https://pokeapi.co/api/v2/pokemon-species/')
+        self.pokemon_species = util.url_to_id(self.data['species']['url'], 'pokemon-species')
 
         self.base_experience = self.data['base_experience']
 
@@ -99,7 +101,7 @@ class Pokemon:
             grow_rate_data = util.fetch_json('growth-rate', str(i + 1))
             species_list = grow_rate_data['pokemon_species']
             for species in species_list:
-                species_id = util.url_to_id(species['url'], 'https://pokeapi.co/api/v2/pokemon-species/')
+                species_id = util.url_to_id(species['url'], 'pokemon-species')
                 if species_id > self.pokemon_species:
                     break
                 if species_id == self.pokemon_species:

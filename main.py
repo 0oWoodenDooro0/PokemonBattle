@@ -8,6 +8,7 @@ import util
 from button import Button
 from pokemon import Pokemon
 from state import BattleState, AttackState
+from generation import Generation
 
 TITLE = "Pokemon Battle"
 FPS = 60
@@ -32,20 +33,18 @@ front_value_image_rect.center = const.FRONT_VALUE_POS
 back_value_image_rect.center = const.BACK_VALUE_POS
 
 attribute_panel = pg.Surface((const.SCREEN_WIDTH - const.PANEL_WIDTH, const.PANEL_HEIGHT))
-attribute_panel.fill(const.WHITE)
 attribute_panel_rect = attribute_panel.get_rect()
 attribute_panel_rect.topleft = (const.PANEL_WIDTH, const.SCREEN_HEIGHT - const.PANEL_HEIGHT)
 
 move_panel = pg.Surface((const.PANEL_WIDTH, const.PANEL_HEIGHT))
-move_panel.fill(const.WHITE)
 move_panel_rect = move_panel.get_rect()
 move_panel_rect.topleft = (0, const.SCREEN_HEIGHT - const.PANEL_HEIGHT)
 
-data = util.fetch_json('pokemon', '100')
-front_pokemon = Pokemon(data, enemy=True)
+generation = Generation(1)
 
-data = util.fetch_json('pokemon', '150')
-back_pokemon = Pokemon(data)
+front_pokemon = Pokemon(60, generation, enemy=True)
+
+back_pokemon = Pokemon(100, generation)
 
 selection_image = pg.image.load(os.path.join('assets', 'button', 'selection_button.png')).convert_alpha()
 move_button_image = pg.image.load(os.path.join('assets', 'button', 'move_button.png')).convert_alpha()
@@ -203,6 +202,7 @@ while run:
                 case AttackState.FIRST_ATTACK:
                     if first_pokemon.attack_accuracy(first_move, last_pokemon):
                         critical, type_effectiveness, stat_change_list = first_pokemon.attack(first_move, last_pokemon)
+                        print(critical, type_effectiveness, stat_change_list)
                         if stat_change_list:
                             stat_change_num = len(stat_change_list)
                         if critical:
@@ -227,9 +227,9 @@ while run:
                     if critical:
                         damage_time[0 if last_pokemon.enemy else 1] += 1
                     match type_effectiveness:
-                        case 2:
+                        case 2 | 4:
                             util.draw_text(f"It's super effective!", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
-                        case 0.5:
+                        case 0.5 | 0.25:
                             util.draw_text(f"It's not very", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
                             util.draw_text(f'effective...', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
                         case 0:
@@ -293,6 +293,7 @@ while run:
                 case AttackState.LAST_ATTACK:
                     if last_pokemon.attack_accuracy(last_move, first_pokemon):
                         critical, type_effectiveness, stat_change_list = last_pokemon.attack(last_move, first_pokemon)
+                        print(critical, type_effectiveness, stat_change_list)
                         if stat_change_list:
                             stat_change_num = len(stat_change_list)
                         if critical:
@@ -317,9 +318,9 @@ while run:
                     if critical:
                         damage_time[0 if first_pokemon.enemy else 1] += 1
                     match type_effectiveness:
-                        case 2:
+                        case 2 | 4:
                             util.draw_text(f"It's super effective!", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
-                        case 0.5:
+                        case 0.5 | 0.25:
                             util.draw_text(f"It's not very", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
                             util.draw_text(f"effective...", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
                         case 0:
