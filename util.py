@@ -18,8 +18,8 @@ def draw_text(text: str, font: pg.font.Font, text_color: pg.Color, pos: tuple[in
         surface.blit(img, pos)
 
 
-def fetch_json(file: str):
-    with open(file) as f:
+def fetch_json(directory: str, file_name: str):
+    with open(f'{directory}/{file_name}.json') as f:
         data = json.load(f)
         return data
 
@@ -29,8 +29,8 @@ def url_to_id(url: str, prefix: str):
 
 
 def type_in_pokemon(data: list, pokemon_type: int):
-    for t in data:
-        if int(url_to_id(t['url'], 'https://pokeapi.co/api/v2/type/')) == pokemon_type:
+    for d in data:
+        if int(url_to_id(d['url'], 'https://pokeapi.co/api/v2/type/')) == pokemon_type:
             return True
     return False
 

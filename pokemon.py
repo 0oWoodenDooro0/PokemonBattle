@@ -64,7 +64,7 @@ class Pokemon:
             if move['version_group_details'][-1]['level_learned_at'] == 1 and move['version_group_details'][-1]['move_learn_method']['name'] == 'level-up' and \
                     move['version_group_details'][0]['version_group']['name'] == 'red-blue':
                 move_id = util.url_to_id(move['move']['url'], 'https://pokeapi.co/api/v2/move/')
-                data = util.fetch_json(f'move/{move_id}.json')
+                data = util.fetch_json('move', str(move_id))
                 move_data = {
                     'id': data['id'],
                     'name': data['name'].capitalize(),
@@ -96,7 +96,7 @@ class Pokemon:
 
     def get_grow_rate(self) -> list:
         for i in range(6):
-            grow_rate_data = util.fetch_json(f'growth-rate/{i + 1}.json')
+            grow_rate_data = util.fetch_json('growth-rate', str(i + 1))
             species_list = grow_rate_data['pokemon_species']
             for species in species_list:
                 species_id = util.url_to_id(species['url'], 'https://pokeapi.co/api/v2/pokemon-species/')
@@ -180,7 +180,7 @@ class Pokemon:
             move_type = move['type']
             stab = 1.5 if move_type in self.types else 1
             damage = (((2 * self.level * critical) / 5 + 2) * power * attack / defense / 50 + 2) * stab
-            move_type_data = util.fetch_json(f'type/{move_type}.json')['damage_relations']
+            move_type_data = util.fetch_json('type', str(move_type))['damage_relations']
             type_effectiveness = 1
             for i in range(len(defender_pokemon.types)):
                 if util.type_in_pokemon(move_type_data['double_damage_to'], defender_pokemon.types[i]):
@@ -234,7 +234,7 @@ class Pokemon:
                             stat_change = 8
                         case _:
                             print(move['stat_changes'])
-                stat_name = util.fetch_json(f'stat/{move["stat_changes"][i]["stat"]}.json')
+                stat_name = util.fetch_json('stat', str(move["stat_changes"][i]["stat"]))
                 stat_change_list.append((target_pokemon, stat_name['name'], stat_change))
         move['pp'] -= 1
         return critical, type_effectiveness, stat_change_list

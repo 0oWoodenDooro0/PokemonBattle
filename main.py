@@ -11,8 +11,9 @@ from state import BattleState, AttackState
 TITLE = "Pokemon Battle"
 FPS = 60
 
-pg.init()
+pg.mixer.pre_init()
 pg.mixer.init()
+pg.init()
 
 clock = pg.time.Clock()
 
@@ -48,10 +49,10 @@ move_panel.fill(const.WHITE)
 move_panel_rect = move_panel.get_rect()
 move_panel_rect.topleft = (0, const.SCREEN_HEIGHT - const.PANEL_HEIGHT + 2)
 
-data = util.fetch_json('pokemon/pokemon3.json')
+data = util.fetch_json('pokemon', 'pokemon3')
 front_pokemon = Pokemon(data, enemy=True)
 
-data = util.fetch_json('pokemon/pokemon1.json')
+data = util.fetch_json('pokemon', 'pokemon2')
 back_pokemon = Pokemon(data)
 
 selection_image = pg.image.load('assets/button/selection_button.png').convert_alpha()
@@ -86,11 +87,12 @@ stat_change_list: list | None = None
 stat_change_num: int = 0
 damage_time: list[int, int] = [0, 0]
 
-pg.mixer.music.load('soundtrack/Wild Battle Music EXTENDED (128 kbps).mp3')
+pg.mixer.music.load('soundtrack/Battle Music.mp3')
 pg.mixer.music.set_volume(0.1)
 pg.mixer.music.play(loops=-1)
 
-button_select_sound = pg.mixer.Sound('sound_effect/Button Select Sound Effect (128 kbps).wav')
+button_select_sound = pg.mixer.Sound('sound_effect/Button Select.wav')
+hurt_sound = pg.mixer.Sound('sound_effect/Hurt.wav')
 
 run = True
 while run:
@@ -186,10 +188,11 @@ while run:
                     attribute_panel.fill(const.WHITE)
                     util.draw_text(f'Power: {back_pokemon.moves[i]["power"]}', TEXT_FONT, const.BLACK, (20, 20), attribute_panel)
                     util.draw_text(f'Accuracy: {back_pokemon.moves[i]["accuracy"]}', TEXT_FONT, const.BLACK, (20, 60), attribute_panel)
-                    type_name = util.fetch_json(f'type/{back_pokemon.moves[i]["type"]}.json')['name']
+                    type_name = util.fetch_json('type', str(back_pokemon.moves[i]["type"]))['name']
                     util.draw_text(f'Type: {type_name}', TEXT_FONT, const.BLACK, (20, 100), attribute_panel)
 
         case BattleState.DEFEAT:
+            damage_time = [0, 0]
             if front_pokemon.hp == 0:
                 isEnemy = 'Enemy ' if front_pokemon.enemy else ''
                 util.draw_text(f'{isEnemy}{front_pokemon.name}', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
@@ -210,6 +213,8 @@ while run:
                         critical, type_effectiveness, stat_change_list = first_pokemon.attack(first_move, last_pokemon)
                         if stat_change_list:
                             stat_change_num = len(stat_change_list)
+                        if critical:
+                            hurt_sound.play()
                         attack_state = AttackState.FIRST_ATTACK_HIT
                     else:
                         attack_state = AttackState.FIRST_ATTACK_NOT_HIT
@@ -246,6 +251,7 @@ while run:
                         battle_state = BattleState.DEFEAT
 
                 case AttackState.FIRST_STAT_CHANGE:
+                    damage_time = [0, 0]
                     if stat_change_num == 0 or not stat_change_list:
                         attack_state = AttackState.LAST_ATTACK
                     else:
@@ -297,6 +303,8 @@ while run:
                         critical, type_effectiveness, stat_change_list = last_pokemon.attack(last_move, first_pokemon)
                         if stat_change_list:
                             stat_change_num = len(stat_change_list)
+                        if critical:
+                            hurt_sound.play()
                         attack_state = AttackState.LAST_ATTACK_HIT
                     else:
                         attack_state = AttackState.LAST_ATTACK_NOT_HIT
@@ -333,6 +341,7 @@ while run:
                         battle_state = BattleState.DEFEAT
 
                 case AttackState.LAST_STAT_CHANGE:
+                    damage_time = [0, 0]
                     if stat_change_num == 0 or not stat_change_list:
                         battle_state = BattleState.SELECTION
                     else:
