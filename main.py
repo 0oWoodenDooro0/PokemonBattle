@@ -6,6 +6,7 @@ import pygame as pg
 import constants as const
 import util
 from button import Button
+from move import Move
 from pokemon import Pokemon
 from state import BattleState, AttackState
 from generation import Generation
@@ -66,11 +67,11 @@ for i in range(4):
 
 battle_state: BattleState = BattleState.PREBATTLE
 attack_state: AttackState = AttackState.FIRST_ATTACK
-back_move: dict | None = None
-front_move: dict | None = None
-first_move: dict | None = None
+back_move: Move | None = None
+front_move: Move | None = None
+first_move: Move | None = None
 first_pokemon: Pokemon | None = None
-last_move: dict | None = None
+last_move: Move | None = None
 last_pokemon: Pokemon | None = None
 critical: int | None = None
 type_effectiveness: int | float | None = None
@@ -145,19 +146,19 @@ while run:
             for i in range(len(back_pokemon.moves)):
                 x = const.PANEL_WIDTH // 4 * (1 if i % 2 == 0 else 3)
                 y = const.PANEL_HEIGHT // 4 * (1 if i // 2 == 0 else 3) - 20
-                util.draw_text(f'{back_pokemon.moves[i]["name"]}', TEXT_FONT, const.BLACK, (x, y), move_panel, True)
-                util.draw_text(f'{back_pokemon.moves[i]["pp"]}/{back_pokemon.moves[i]["max_pp"]}', TEXT_FONT, const.BLACK, (x, y + 40), move_panel, True)
+                util.draw_text(f'{back_pokemon.moves[i].name}', TEXT_FONT, const.BLACK, (x, y), move_panel, True)
+                util.draw_text(f'{back_pokemon.moves[i].pp}/{back_pokemon.moves[i].max_pp}', TEXT_FONT, const.BLACK, (x, y + 40), move_panel, True)
                 button_click = move_buttons[i].draw(screen)
-                if button_click[0] and back_pokemon.moves[i]['pp'] != 0:
+                if button_click[0] and back_pokemon.moves[i].pp != 0:
                     button_select_sound.play()
                     back_move = back_pokemon.moves[i]
                     front_move = random.choice(front_pokemon.moves)
-                    if back_move['priority'] > front_move['priority']:
+                    if back_move.priority > front_move.priority:
                         first_move = back_move
                         first_pokemon = back_pokemon
                         last_move = front_move
                         last_pokemon = front_pokemon
-                    elif back_move['priority'] < front_move['priority']:
+                    elif back_move.priority < front_move.priority:
                         first_move = back_move
                         first_pokemon = back_pokemon
                         last_move = front_move
@@ -172,14 +173,15 @@ while run:
                             first_pokemon = front_pokemon
                             last_move = back_move
                             last_pokemon = back_pokemon
+                    back_move.pp -= 1
                     battle_state = BattleState.ATTACK
                     attack_state = AttackState.FIRST_ATTACK
                     damage_time = [0, 0]
                 elif button_click[1]:
                     attribute_panel.fill(const.WHITE)
-                    util.draw_text(f'Power: {back_pokemon.moves[i]["power"]}', TEXT_FONT, const.BLACK, (20, 20), attribute_panel)
-                    util.draw_text(f'Accuracy: {back_pokemon.moves[i]["accuracy"]}', TEXT_FONT, const.BLACK, (20, 60), attribute_panel)
-                    type_name = util.fetch_json('type', str(back_pokemon.moves[i]["type"]))['name'].capitalize()
+                    util.draw_text(f'Power: {back_pokemon.moves[i].power}', TEXT_FONT, const.BLACK, (20, 20), attribute_panel)
+                    util.draw_text(f'Accuracy: {back_pokemon.moves[i].accuracy}', TEXT_FONT, const.BLACK, (20, 60), attribute_panel)
+                    type_name = util.fetch_json('type', str(back_pokemon.moves[i].type))['name'].capitalize()
                     util.draw_text(f'Type: {type_name}', TEXT_FONT, const.BLACK, (20, 100), attribute_panel)
 
         case BattleState.DEFEAT:
@@ -216,7 +218,7 @@ while run:
                         damage_time[0 if last_pokemon.enemy else 1] += 1
                     isEnemy = 'Enemy ' if first_pokemon.enemy else ''
                     util.draw_text(f'{isEnemy}{first_pokemon.name}', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
-                    util.draw_text(f'used {first_move["name"]}', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
+                    util.draw_text(f'used {first_move.name}', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
 
                 case AttackState.FIRST_CRICAL_HIT:
                     if critical:
@@ -307,7 +309,7 @@ while run:
                         damage_time[0 if first_pokemon.enemy else 1] += 1
                     isEnemy = 'Enemy ' if last_pokemon.enemy else ''
                     util.draw_text(f'{isEnemy}{last_pokemon.name}', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
-                    util.draw_text(f'used {last_move["name"]}', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
+                    util.draw_text(f'used {last_move.name}', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
 
                 case AttackState.LAST_CRICAL_HIT:
                     if critical:
