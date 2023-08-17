@@ -13,36 +13,31 @@ from move import Move
 
 
 class Pokemon:
-    def __init__(self, pokemon_id: int, generation: Generation, enemy: bool = False):
+    def __init__(self, pokemon_id: int, generation: Generation, enemy: bool = False, ):
         self.generation = generation
         self.id: int = pokemon_id
         self.data: dict = util.fetch_json('pokemon', str(pokemon_id))
         self.enemy: bool = enemy
-        self.sprite: pg.Surface | None = None
-        self.sprite_rect: pg.Rect | None = None
-        self.name: str | None = None
-        self.basic_stats: dict | None = None
-        self.individual_level: dict | None = None
-        self.basic_points: dict | None = None
-        self.stats: dict | None = None
-        self.stats_effect: dict | None = None
-        self.hp: int | None = None
-        self.types: list | None = None
-        self.moves: list[Move] | None = None
-        self.pokemon_species: int | None = None
-        self.base_experience: int | None = None
-        self.experience: int = 0
+        sprite, sprite_rect = self.get_sprite()
+        self.sprite: pg.Surface = sprite
+        self.sprite_rect: pg.Rect = sprite_rect
         self.level: int = 1
-        self.levels: list | None = None
-        self.health_bar: HealthBar | None = None
-        self.set_sprite()
-        self.set_pokemon_data()
+        self.name: str = self.data['name'].capitalize()
+        self.basic_stats: dict = self.get_basic_stats()
+        self.individual_level: dict = self.get_individual_level()
+        self.basic_points: dict = self.get_basic_point()
+        self.stats: dict = self.get_stat()
+        self.stats_effect: dict = self.reset_stats_effect()
+        self.hp: int = self.stats[1]
+        self.types: list[int] = [util.url_to_id(x['type']['url'], 'type') for x in self.data['types']]
+        self.moves: list[Move] = self.get_moves()
+        self.pokemon_species: int = util.url_to_id(self.data['species']['url'], 'pokemon-species')
+        self.base_experience: int = self.data['base_experience']
+        self.experience: int = 0
+        self.levels: list = self.get_levels()
+        self.health_bar: HealthBar = self.get_health_bar()
 
     def set_pokemon_data(self):
-        self.name = self.data['name'].capitalize()
-
-        self.types = [util.url_to_id(x['type']['url'], 'type') for x in self.data['types']]
-
         self.basic_stats = {}
         self.basic_points = {}
         self.stats_effect = {}
@@ -54,33 +49,35 @@ class Pokemon:
         self.stats_effect[7] = 0
         self.stats_effect[8] = 0
 
-        self.individual_level = self.get_individual_level()
+    def get_basic_stats(self):
+        return {util.url_to_id(stat['stat']['url'], 'stat'): stat['base_stat'] for stat in self.data['stats']}
 
-        self.stats = self.get_stat()
+    @staticmethod
+    def get_basic_point():
+        return {i + 1: 0 for i in range(6)}
 
-        self.hp = self.stats[1]
+    @staticmethod
+    def reset_stats_effect():
+        return {i + 1: 0 for i in range(8)}
 
+    def get_moves(self):
         all_moves: list = self.data['moves']
-        self.moves = []
+        moves = []
         for move in all_moves:
             move_id = util.url_to_id(move['move']['url'], 'move')
-            if move_id in self.generation.moves and len(self.moves) < 4:
+            if move_id in self.generation.moves and len(moves) < 4:
                 move_id = util.url_to_id(move['move']['url'], 'move')
-                self.moves.append(Move(move_id))
+                moves.append(Move(move_id))
+        return moves
 
-        self.pokemon_species = util.url_to_id(self.data['species']['url'], 'pokemon-species')
-
-        self.base_experience = self.data['base_experience']
-
-        self.levels = self.get_grow_rate()
-
+    def get_health_bar(self):
         if self.enemy:
-            self.health_bar = HealthBar(const.POKEMON_IMAGE_SIZE // 2, const.POKEMON_IMAGE_SIZE // 4, 200, 20, self.stats[1])
+            return HealthBar(const.POKEMON_IMAGE_SIZE // 2, const.POKEMON_IMAGE_SIZE // 4, 200, 20, self.stats[1])
         else:
-            self.health_bar = HealthBar(const.SCREEN_WIDTH - const.POKEMON_IMAGE_SIZE // 2, const.SCREEN_HEIGHT - const.PANEL_HEIGHT - const.POKEMON_IMAGE_SIZE // 4, 200, 20,
-                                        self.stats[1])
+            return HealthBar(const.SCREEN_WIDTH - const.POKEMON_IMAGE_SIZE // 2, const.SCREEN_HEIGHT - const.PANEL_HEIGHT - const.POKEMON_IMAGE_SIZE // 4, 200, 20,
+                             self.stats[1])
 
-    def get_grow_rate(self) -> list:
+    def get_levels(self) -> list:
         for i in range(6):
             grow_rate_data = util.fetch_json('growth-rate', str(i + 1))
             species_list = grow_rate_data['pokemon_species']
@@ -127,17 +124,19 @@ class Pokemon:
         else:
             return 1
 
-    def set_sprite(self):
+    def get_sprite(self):
         image_url = self.data['sprites']['front_default'] if self.enemy else self.data['sprites']['back_default']
         image_stream = urlopen(image_url).read()
         image_file = io.BytesIO(image_stream)
-        self.sprite = pg.image.load(image_file).convert_alpha()
-        self.sprite = pg.transform.scale(self.sprite, (300, 300))
-        self.sprite_rect = self.sprite.get_rect()
+        sprite = pg.image.load(image_file).convert_alpha()
+        sprite = pg.transform.scale(sprite, (300, 300))
+        sprite_rect = sprite.get_rect()
         if self.enemy:
-            self.sprite_rect.topright = (0, - const.POKEMON_IMAGE_SIZE // 5)
+            sprite_rect.topright = (0, - const.POKEMON_IMAGE_SIZE // 5)
+            return sprite, sprite_rect
         else:
-            self.sprite_rect.bottomleft = (const.SCREEN_WIDTH, const.SCREEN_HEIGHT - const.PANEL_HEIGHT + const.POKEMON_IMAGE_SIZE // 5)
+            sprite_rect.bottomleft = (const.SCREEN_WIDTH, const.SCREEN_HEIGHT - const.PANEL_HEIGHT + const.POKEMON_IMAGE_SIZE // 5)
+            return sprite, sprite_rect
 
     def draw(self, screen: pg.Surface):
         screen.blit(self.sprite, self.sprite_rect)

@@ -43,9 +43,9 @@ move_panel_rect.topleft = (0, const.SCREEN_HEIGHT - const.PANEL_HEIGHT)
 
 generation = Generation(1)
 
-front_pokemon = Pokemon(60, generation, enemy=True)
+front_pokemon = Pokemon(1, generation, enemy=True)
 
-back_pokemon = Pokemon(100, generation)
+back_pokemon = Pokemon(2, generation)
 
 selection_image = pg.image.load(os.path.join('assets', 'button', 'selection_button.png')).convert_alpha()
 move_button_image = pg.image.load(os.path.join('assets', 'button', 'move_button.png')).convert_alpha()
