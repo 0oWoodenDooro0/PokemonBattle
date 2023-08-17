@@ -1,4 +1,5 @@
 import math
+import os.path
 
 import pygame as pg
 import json
@@ -19,7 +20,8 @@ def draw_text(text: str, font: pg.font.Font, text_color: pg.Color, pos: tuple[in
 
 
 def fetch_json(directory: str, file_name: str):
-    with open(f'{directory}/{file_name}.json') as f:
+    path = os.path.join(directory, f'{file_name}.json')
+    with open(path) as f:
         data = json.load(f)
         return data
 

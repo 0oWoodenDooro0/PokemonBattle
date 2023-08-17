@@ -1,3 +1,4 @@
+import os.path
 import random
 
 import pygame as pg
@@ -26,10 +27,6 @@ MESSAGE_FONT = pg.font.Font('assets/pokemon_pixel_font.ttf', 60)
 panel = pg.Surface((const.SCREEN_WIDTH, const.PANEL_HEIGHT))
 panel.fill(const.WHITE)
 pg.draw.line(panel, const.BLACK, (0, 0), (const.SCREEN_WIDTH, 0), 2)
-pg.draw.line(panel, const.BLACK, (0, 0), (const.SCREEN_WIDTH, 0), 2)
-pg.draw.line(panel, const.BLACK, (const.PANEL_WIDTH, 0), (const.PANEL_WIDTH, const.PANEL_HEIGHT), 2)
-pg.draw.line(panel, const.BLACK, (const.PANEL_WIDTH + 20, const.PANEL_HEIGHT // 2), (const.SCREEN_WIDTH - 20, const.PANEL_HEIGHT // 2), 1)
-pg.draw.line(panel, const.BLACK, ((const.SCREEN_WIDTH + const.PANEL_WIDTH) // 2, 20), ((const.SCREEN_WIDTH + const.PANEL_WIDTH) // 2, const.PANEL_HEIGHT - 20), 1)
 panel_rect = panel.get_rect()
 panel_rect.topleft = (0, const.SCREEN_HEIGHT - const.PANEL_HEIGHT)
 front_value_image = pg.image.load('assets/image/front_value.png').convert_alpha()
@@ -55,8 +52,8 @@ front_pokemon = Pokemon(data, enemy=True)
 data = util.fetch_json('pokemon', 'pokemon2')
 back_pokemon = Pokemon(data)
 
-selection_image = pg.image.load('assets/button/selection_button.png').convert_alpha()
-move_button_image = pg.image.load('assets/button/move_button.png').convert_alpha()
+selection_image = pg.image.load(os.path.join('assets', 'button', 'selection_button.png')).convert_alpha()
+move_button_image = pg.image.load(os.path.join('assets', 'button', 'move_button.png')).convert_alpha()
 
 selection_buttons: list[Button] = []
 selection_button_texts: list[str] = ['FIGHT', 'BAG', 'POKEMON', 'RUN']
@@ -87,12 +84,12 @@ stat_change_list: list | None = None
 stat_change_num: int = 0
 damage_time: list[int, int] = [0, 0]
 
-pg.mixer.music.load('soundtrack/Battle Music.mp3')
+pg.mixer.music.load(os.path.join('soundtrack', 'Battle Music.mp3'))
 pg.mixer.music.set_volume(0.1)
 pg.mixer.music.play(loops=-1)
 
-button_select_sound = pg.mixer.Sound('sound_effect/Button Select.wav')
-hurt_sound = pg.mixer.Sound('sound_effect/Hurt.wav')
+button_select_sound = pg.mixer.Sound(os.path.join('sound_effect', 'Button Select.wav'))
+hurt_sound = pg.mixer.Sound(os.path.join('sound_effect', 'Hurt.wav'))
 
 run = True
 while run:
@@ -104,7 +101,7 @@ while run:
 
     screen.blit(panel, panel_rect)
 
-    if battle_state != BattleState.PREBATTLE:
+    if battle_state is not BattleState.PREBATTLE:
         screen.blit(back_value_image, back_value_image_rect)
         screen.blit(front_value_image, front_value_image_rect)
         front_pokemon.draw_health_bar(screen)
@@ -116,6 +113,8 @@ while run:
         util.draw_text(f'Lv{back_pokemon.level}', TEXT_FONT, const.BLACK, (const.BACK_VALUE_POS[0] + 40 + 64, const.BACK_VALUE_POS[1] - 50), screen)
         util.draw_text(f'{back_pokemon.hp}/{back_pokemon.stats[1]}', TEXT_FONT, const.BLACK, (const.BACK_VALUE_POS[0] + 70, const.BACK_VALUE_POS[1] + 40), screen, True)
 
+    if battle_state is BattleState.SELECTION or battle_state is BattleState.FIGHT:
+        pg.draw.line(screen, const.BLACK, (const.PANEL_WIDTH, const.SCREEN_HEIGHT - const.PANEL_HEIGHT), (const.PANEL_WIDTH, const.SCREEN_HEIGHT), 2)
         for i in range(4):
             x = (const.SCREEN_WIDTH - const.PANEL_WIDTH) // 4 * (1 if i % 2 == 0 else 3)
             y = const.PANEL_HEIGHT // 4 * (1 if i // 2 == 0 else 3)

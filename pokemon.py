@@ -235,7 +235,7 @@ class Pokemon:
                         case _:
                             print(move['stat_changes'])
                 stat_name = util.fetch_json('stat', str(move["stat_changes"][i]["stat"]))
-                stat_change_list.append((target_pokemon, stat_name['name'], stat_change))
+                stat_change_list.append((target_pokemon, stat_name['name'].upper(), stat_change))
         move['pp'] -= 1
         return critical, type_effectiveness, stat_change_list
 
