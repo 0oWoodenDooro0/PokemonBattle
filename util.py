@@ -25,6 +25,8 @@ def fetch_json(directory: str, file_name: str):
     path = os.path.join(directory, f'{file_name}.json')
     if not os.path.isfile(path):
         url = f'https://pokeapi.co/api/v2/{directory}/{file_name}'
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
         json_data = requests.get(url).json()
         with open(path, 'w') as file:
             json.dump(json_data, file)
