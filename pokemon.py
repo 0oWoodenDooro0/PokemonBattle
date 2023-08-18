@@ -1,6 +1,7 @@
 import io
 import math
 import random
+from pprint import pprint
 from urllib.request import urlopen
 
 import pygame as pg
@@ -13,7 +14,7 @@ from move import Move
 
 
 class Pokemon:
-    def __init__(self, pokemon_id: int, generation: Generation, enemy: bool = False, ):
+    def __init__(self, pokemon_id: int, generation: Generation, enemy: bool = False):
         self.generation = generation
         self.id: int = pokemon_id
         self.data: dict = util.fetch_json('pokemon', str(pokemon_id))
@@ -68,7 +69,7 @@ class Pokemon:
             if move_id in self.generation.moves and len(moves) < 4:
                 move_id = util.url_to_id(move['move']['url'], 'move')
                 move = Move(move_id)
-                if move.category in [0, 2]:
+                if move.category in [0, 2, 3]:
                     moves.append(move)
         return moves
 
@@ -219,6 +220,10 @@ class Pokemon:
                                 print(move.stat_changes)
                     stat_name = util.fetch_json('stat', str(move.stat_changes[i]["stat"]))
                     stat_change_list.append((target_pokemon, stat_name['name'].upper(), stat_change))
+            case 3:
+                self.hp += math.floor(move.healing / 100 * self.stats[1])
+                if self.hp > self.stats[1]:
+                    self.hp = self.stats[1]
             case _:
                 print(move.category)
         return critical, type_effectiveness, stat_change_list
