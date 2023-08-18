@@ -6,10 +6,10 @@ import pygame as pg
 import constants as const
 import util
 from button import Button
+from generation import Generation
 from move import Move
 from pokemon import Pokemon
 from state import BattleState, AttackState
-from generation import Generation
 
 TITLE = "Pokemon Battle"
 FPS = 60
@@ -41,11 +41,13 @@ move_panel = pg.Surface((const.PANEL_WIDTH, const.PANEL_HEIGHT))
 move_panel_rect = move_panel.get_rect()
 move_panel_rect.topleft = (0, const.SCREEN_HEIGHT - const.PANEL_HEIGHT)
 
+util.fetch_all_stat()
+
 generation = Generation(1)
 
 front_pokemon = Pokemon(1, generation, enemy=True)
 
-back_pokemon = Pokemon(64, generation)
+back_pokemon = Pokemon(23, generation)
 
 selection_image = pg.image.load(os.path.join('assets', 'button', 'selection_button.png')).convert_alpha()
 move_button_image = pg.image.load(os.path.join('assets', 'button', 'move_button.png')).convert_alpha()
@@ -93,7 +95,6 @@ while run:
     screen.fill(const.GREY)
     move_panel.fill(const.WHITE)
     attribute_panel.fill(const.WHITE)
-    # print(battle_state, attack_state)
 
     if battle_state is not BattleState.PREBATTLE:
         screen.blit(back_value_image, back_value_image_rect)
@@ -397,6 +398,7 @@ while run:
         if event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
             run = False
         if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
+            print(battle_state, attack_state)
             match attack_state:
                 case AttackState.FIRST_ATTACK_HIT:
                     if critical == 2:

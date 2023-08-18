@@ -1,7 +1,6 @@
 import io
 import math
 import random
-from pprint import pprint
 from urllib.request import urlopen
 
 import pygame as pg
@@ -69,7 +68,7 @@ class Pokemon:
             if move_id in self.generation.moves and len(moves) < 4:
                 move_id = util.url_to_id(move['move']['url'], 'move')
                 move = Move(move_id)
-                if move.category in [0, 2, 3]:
+                if move.category in [0, 2, 3, 6, 7]:
                     moves.append(move)
         return moves
 
@@ -151,82 +150,108 @@ class Pokemon:
         stat_change_list = []
         match move.category:
             case 0:
-                if move.crit_rate == 0:
-                    crit = self.basic_stats[6] / 2
-                else:
-                    crit = self.basic_stats[6] * 4
-                r = random.randint(1, 256)
-                critical = 1 if r > crit else 2
-                power = move.power
-                attack_stat = self.stats[2] if move.damage_class == 2 else self.stats[4] if move.damage_class == 3 else 0
-                attack = attack_stat * self.get_stat_effect(2)
-                defense_stat = defender_pokemon.stats[3] if move.damage_class == 2 else defender_pokemon.stats[5] if move.damage_class == 3 else 0
-                defense = defense_stat * self.get_stat_effect(3)
-                move_type = move.type
-                stab = 1.5 if move_type in self.types else 1
-                damage = (((2 * self.level * critical) / 5 + 2) * power * attack / defense / 50 + 2) * stab
-                move_type_data = util.fetch_json('type', str(move_type))['damage_relations']
-                type_effectiveness = 1
-                for i in range(len(defender_pokemon.types)):
-                    if util.type_in_pokemon(move_type_data['double_damage_to'], defender_pokemon.types[i]):
-                        damage = damage * 2
-                        type_effectiveness = type_effectiveness * 2
-                    elif util.type_in_pokemon(move_type_data['half_damage_to'], defender_pokemon.types[i]):
-                        damage = damage * 0.5
-                        type_effectiveness = type_effectiveness * 0.5
-                    elif util.type_in_pokemon(move_type_data['no_damage_to'], defender_pokemon.types[i]):
-                        damage = damage * 0
-                        type_effectiveness = type_effectiveness * 0
-                damage = 1 if math.floor(damage) <= 1 else math.floor(damage * random.randint(217, 255) / 255)
+                critical, type_effectiveness, damage = self.damage_attack(move, defender_pokemon)
                 defender_pokemon.hp -= damage
             case 2:
-                for i in range(len(move.stat_changes)):
-                    target_pokemon: Pokemon | None = None
-                    match move.move_target:
-                        case 10 | 11:
-                            target_pokemon = defender_pokemon
-                        case 7:
-                            target_pokemon = self
-                        case _:
-                            print(move.move_target)
-                    stat_change = 0
-                    if move.stat_changes[i]['change'] > 0 and target_pokemon.stats_effect[move.stat_changes[i]['stat']] == 6:
-                        stat_change = 9
-                    elif move.stat_changes[i]['change'] < 0 and target_pokemon.stats_effect[move.stat_changes[i]['stat']] == -6:
-                        stat_change = 10
-                    elif target_pokemon.stats_effect[move.stat_changes[i]['stat']] + move.stat_changes[i]['change'] >= 6:
-                        target_pokemon.stats_effect[move.stat_changes[i]['stat']] = 6
-                        stat_change = 4
-                    else:
-                        target_pokemon.stats_effect[move.stat_changes[i]['stat']] += move.stat_changes[i]['change']
-                        if target_pokemon.stats_effect[move.stat_changes[i]['stat']] > 6:
-                            target_pokemon.stats_effect[move.stat_changes[i]['stat']] = 6
-                        elif target_pokemon.stats_effect[move.stat_changes[i]['stat']] < -6:
-                            target_pokemon.stats_effect[move.stat_changes[i]['stat']] = -6
-                        match move.stat_changes[i]['change']:
-                            case 1:
-                                stat_change = 1
-                            case 2:
-                                stat_change = 2
-                            case 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11:
-                                stat_change = 3
-                            case -1:
-                                stat_change = 6
-                            case -2:
-                                stat_change = 7
-                            case -3 | -4 | -5 | -6 | -7 | -8 | -9 | -10 | -11:
-                                stat_change = 8
-                            case _:
-                                print(move.stat_changes)
-                    stat_name = util.fetch_json('stat', str(move.stat_changes[i]["stat"]))
-                    stat_change_list.append((target_pokemon, stat_name['name'].upper(), stat_change))
+                print(move.stat_chance)
+                match move.move_target:
+                    case 10 | 11:
+                        stat_change_list = self.stat_change(move, defender_pokemon)
+                    case 7:
+                        stat_change_list = self.stat_change(move, self)
+                    case _:
+                        print(move.move_target)
             case 3:
                 self.hp += math.floor(move.healing / 100 * self.stats[1])
                 if self.hp > self.stats[1]:
                     self.hp = self.stats[1]
+            case 6:
+                critical, type_effectiveness, damage = self.damage_attack(move, defender_pokemon)
+                defender_pokemon.hp -= damage
+                if self.stat_accuracy(move.stat_chance):
+                    stat_change_list = self.stat_change(move, defender_pokemon)
+            case 7:
+                critical, type_effectiveness, damage = self.damage_attack(move, defender_pokemon)
+                defender_pokemon.hp -= damage
+                if self.stat_accuracy(move.stat_chance):
+                    stat_change_list = self.stat_change(move, self)
             case _:
                 print(move.category)
         return critical, type_effectiveness, stat_change_list
+
+    def damage_attack(self, move: Move, defender_pokemon: 'Pokemon'):
+        if move.crit_rate == 0:
+            crit = self.basic_stats[6] / 2
+        else:
+            crit = self.basic_stats[6] * 4
+        r = random.randint(1, 256)
+        critical = 1 if r > crit else 2
+        power = move.power
+        attack_stat = self.stats[2] if move.damage_class == 2 else self.stats[4] if move.damage_class == 3 else 0
+        attack = attack_stat * self.get_stat_effect(2)
+        defense_stat = defender_pokemon.stats[3] if move.damage_class == 2 else defender_pokemon.stats[5] if move.damage_class == 3 else 0
+        defense = defense_stat * self.get_stat_effect(3)
+        move_type = move.type
+        stab = 1.5 if move_type in self.types else 1
+        damage = (((2 * self.level * critical) / 5 + 2) * power * attack / defense / 50 + 2) * stab
+        move_type_data = util.fetch_json('type', str(move_type))['damage_relations']
+        type_effectiveness = 1
+        for i in range(len(defender_pokemon.types)):
+            if util.type_in_pokemon(move_type_data['double_damage_to'], defender_pokemon.types[i]):
+                damage = damage * 2
+                type_effectiveness = type_effectiveness * 2
+            elif util.type_in_pokemon(move_type_data['half_damage_to'], defender_pokemon.types[i]):
+                damage = damage * 0.5
+                type_effectiveness = type_effectiveness * 0.5
+            elif util.type_in_pokemon(move_type_data['no_damage_to'], defender_pokemon.types[i]):
+                damage = damage * 0
+                type_effectiveness = type_effectiveness * 0
+        damage = 1 if math.floor(damage) <= 1 else math.floor(damage * random.randint(217, 255) / 255)
+        return critical, type_effectiveness, damage
+
+    @staticmethod
+    def stat_change(move: Move, target_pokemon: 'Pokemon'):
+        stat_change_list = []
+        for i in range(len(move.stat_changes)):
+            stat_change = 0
+            if move.stat_changes[i]['change'] > 0 and target_pokemon.stats_effect[move.stat_changes[i]['stat']] == 6:
+                stat_change = 9
+            elif move.stat_changes[i]['change'] < 0 and target_pokemon.stats_effect[move.stat_changes[i]['stat']] == -6:
+                stat_change = 10
+            elif target_pokemon.stats_effect[move.stat_changes[i]['stat']] + move.stat_changes[i]['change'] >= 6:
+                target_pokemon.stats_effect[move.stat_changes[i]['stat']] = 6
+                stat_change = 4
+            else:
+                target_pokemon.stats_effect[move.stat_changes[i]['stat']] += move.stat_changes[i]['change']
+                if target_pokemon.stats_effect[move.stat_changes[i]['stat']] > 6:
+                    target_pokemon.stats_effect[move.stat_changes[i]['stat']] = 6
+                elif target_pokemon.stats_effect[move.stat_changes[i]['stat']] < -6:
+                    target_pokemon.stats_effect[move.stat_changes[i]['stat']] = -6
+                match move.stat_changes[i]['change']:
+                    case 1:
+                        stat_change = 1
+                    case 2:
+                        stat_change = 2
+                    case 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11:
+                        stat_change = 3
+                    case -1:
+                        stat_change = 6
+                    case -2:
+                        stat_change = 7
+                    case -3 | -4 | -5 | -6 | -7 | -8 | -9 | -10 | -11:
+                        stat_change = 8
+                    case _:
+                        print(move.stat_changes)
+            stat_name = util.fetch_json('stat', str(move.stat_changes[i]["stat"]))
+            stat_change_list.append((target_pokemon, stat_name['name'].upper(), stat_change))
+        return stat_change_list
+
+    @staticmethod
+    def stat_accuracy(stat_chance: int):
+        if stat_chance == 0:
+            return True
+        r = random.randint(1, 100)
+        return True if r <= stat_chance else False
 
     def attack_accuracy(self, move: Move, defender_pokemon: 'Pokemon'):
         if not move.accuracy:

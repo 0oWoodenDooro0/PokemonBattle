@@ -35,6 +35,18 @@ def fetch_json(directory: str, file_name: str):
         return data
 
 
+def fetch_all_stat():
+    for i in range(8):
+        path = os.path.join('stat', f'{i + 1}.json')
+        if not os.path.isfile(path):
+            url = f'https://pokeapi.co/api/v2/stat/{i + 1}'
+            if not os.path.isdir('stat'):
+                os.makedirs('stat')
+            json_data = requests.get(url).json()
+            with open(path, 'w') as file:
+                json.dump(json_data, file)
+
+
 def url_to_id(url: str, prefix: str):
     return int(url.removeprefix(f'https://pokeapi.co/api/v2/{prefix}/').removesuffix('/'))
 
