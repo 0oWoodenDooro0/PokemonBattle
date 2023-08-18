@@ -18,7 +18,9 @@ class HealthBar:
 
     def update(self, hp):
         self.hp = hp
-        if self.temp_hp - self.hp < self.max_hp * 0.005:
+        if abs(self.temp_hp - self.hp) < self.max_hp * 0.005:
             self.temp_hp = self.hp
         elif self.temp_hp > self.hp:
             self.temp_hp -= self.max_hp * 0.005
+        elif self.temp_hp < self.hp:
+            self.temp_hp += self.max_hp * 0.005

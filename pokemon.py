@@ -61,13 +61,15 @@ class Pokemon:
         return {i + 1: 0 for i in range(8)}
 
     def get_moves(self):
-        all_moves: list = self.data['moves']
+        move_list: list = self.data['moves']
         moves = []
-        for move in all_moves:
+        for move in move_list:
             move_id = util.url_to_id(move['move']['url'], 'move')
             if move_id in self.generation.moves and len(moves) < 4:
                 move_id = util.url_to_id(move['move']['url'], 'move')
-                moves.append(Move(move_id))
+                move = Move(move_id)
+                if move.category in [0, 2]:
+                    moves.append(move)
         return moves
 
     def get_health_bar(self):

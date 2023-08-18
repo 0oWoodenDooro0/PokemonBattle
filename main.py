@@ -93,6 +93,7 @@ while run:
     screen.fill(const.GREY)
     move_panel.fill(const.WHITE)
     attribute_panel.fill(const.WHITE)
+    # print(battle_state, attack_state)
 
     if battle_state is not BattleState.PREBATTLE:
         screen.blit(back_value_image, back_value_image_rect)
@@ -405,7 +406,7 @@ while run:
                 case AttackState.FIRST_CRICAL_HIT:
                     attack_state = AttackState.FIRST_EFFECTIVE
                 case AttackState.FIRST_EFFECTIVE:
-                    attack_state = AttackState.LAST_ATTACK
+                    attack_state = AttackState.FIRST_STAT_CHANGE
                 case AttackState.FIRST_ATTACK_NOT_HIT:
                     attack_state = AttackState.LAST_ATTACK
                 case AttackState.LAST_ATTACK_HIT:
@@ -416,13 +417,16 @@ while run:
                 case AttackState.LAST_CRICAL_HIT:
                     attack_state = AttackState.LAST_EFFECTIVE
                 case AttackState.LAST_EFFECTIVE:
-                    battle_state = BattleState.SELECTION
+                    attack_state = AttackState.LAST_STAT_CHANGE
                 case AttackState.LAST_ATTACK_NOT_HIT:
                     battle_state = BattleState.SELECTION
                 case AttackState.FIRST_STAT_CHANGE | AttackState.LAST_STAT_CHANGE:
                     stat_change_num -= 1
-            if battle_state == BattleState.DEFEAT:
-                back_pokemon.add_experience(util.get_battle_experience(front_pokemon))
-                battle_state = BattleState.EXP
+            match battle_state:
+                case BattleState.DEFEAT:
+                    back_pokemon.add_experience(util.get_battle_experience(front_pokemon))
+                    battle_state = BattleState.EXP
+                case BattleState.EXP:
+                    run = False
 
     pg.display.flip()
