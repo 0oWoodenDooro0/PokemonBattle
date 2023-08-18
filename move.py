@@ -10,9 +10,9 @@ class Move:
         self.damage_class = util.url_to_id(self.data['damage_class']['url'], 'move-damage-class')
         self.effect_chance = self.data['effect_chance']
         self.meta = self.data['meta']
-        self.ailment = util.url_to_id(self.meta['aliment']['url'], 'move-ailment')
+        self.ailment = util.url_to_id(self.meta['ailment']['url'], 'move-ailment')
         self.ailment_chance = self.meta['ailment_chance']
-        self.category = self.meta['category']
+        self.category = util.url_to_id(self.meta['category']['url'], 'move-category')
         self.crit_rate = self.meta['crit_rate']
         self.drain = self.meta['drain']
         self.flinch_chance = self.meta['flinch_chance']
