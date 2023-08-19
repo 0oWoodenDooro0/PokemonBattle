@@ -68,7 +68,7 @@ class Pokemon:
             if move_id in self.generation.moves and len(moves) < 4:
                 move_id = util.url_to_id(move['move']['url'], 'move')
                 move = Move(move_id)
-                if move.category in [0, 2, 3, 6, 7]:
+                if move.category in [0, 2, 3, 6, 8]:
                     moves.append(move)
         return moves
 
@@ -148,6 +148,7 @@ class Pokemon:
         critical: int | None = None
         type_effectiveness: int | float | list | None = None
         stat_change_list = []
+        print(move.category)
         match move.category:
             case 0:
                 critical, type_effectiveness, damage = self.damage_attack(move, defender_pokemon)
@@ -175,6 +176,12 @@ class Pokemon:
                 defender_pokemon.hp -= damage
                 if self.stat_accuracy(move.stat_chance):
                     stat_change_list = self.stat_change(move, self)
+            case 8:
+                critical, type_effectiveness, damage = self.damage_attack(move, defender_pokemon)
+                defender_pokemon.hp -= damage
+                self.hp += math.floor(move.drain / 100 * damage)
+                if self.hp > self.stats[1]:
+                    self.hp = self.stats[1]
             case _:
                 print(move.category)
         return critical, type_effectiveness, stat_change_list

@@ -45,9 +45,9 @@ util.fetch_all_stat()
 
 generation = Generation(1)
 
-front_pokemon = Pokemon(1, generation, enemy=True)
+front_pokemon = Pokemon(7, generation, enemy=True)
 
-back_pokemon = Pokemon(23, generation)
+back_pokemon = Pokemon(15, generation)
 
 selection_image = pg.image.load(os.path.join('assets', 'button', 'selection_button.png')).convert_alpha()
 move_button_image = pg.image.load(os.path.join('assets', 'button', 'move_button.png')).convert_alpha()
@@ -125,6 +125,8 @@ while run:
                         pass
                     case 3:
                         run = False
+        pg.draw.line(move_panel, const.BLACK, (0, 0), (0, const.PANEL_HEIGHT), 2)
+        pg.draw.line(attribute_panel, const.BLACK, (0, 0), (0, const.PANEL_HEIGHT), 2)
 
     if damage_time[0] % 20 < 10 or damage_time[0] > 60:
         front_pokemon.draw(screen)
@@ -185,6 +187,8 @@ while run:
                     util.draw_text(f'Accuracy: {back_pokemon.moves[i].accuracy}', TEXT_FONT, const.BLACK, (20, 60), attribute_panel)
                     type_name = util.fetch_json('type', str(back_pokemon.moves[i].type))['name'].capitalize()
                     util.draw_text(f'Type: {type_name}', TEXT_FONT, const.BLACK, (20, 100), attribute_panel)
+                    pg.draw.line(move_panel, const.BLACK, (0, 0), (0, const.PANEL_HEIGHT), 2)
+                    pg.draw.line(attribute_panel, const.BLACK, (0, 0), (0, const.PANEL_HEIGHT), 2)
 
         case BattleState.DEFEAT:
             damage_time = [0, 0]
@@ -225,7 +229,7 @@ while run:
                 case AttackState.FIRST_CRICAL_HIT:
                     if critical:
                         damage_time[0 if last_pokemon.enemy else 1] += 1
-                    util.draw_text(f"Critical Hit!", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
+                    util.draw_text(f"Critical hit!", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
 
                 case AttackState.FIRST_EFFECTIVE:
                     if critical:
@@ -290,9 +294,9 @@ while run:
                                 util.draw_text(f"{stat_name} won't go any lower!", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
 
                 case AttackState.FIRST_ATTACK_NOT_HIT:
-                    isEnemy = 'Enemy ' if last_pokemon.enemy else ''
-                    util.draw_text(f'{isEnemy}{last_pokemon.name}', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
-                    util.draw_text(f'avoided the attack', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
+                    isEnemy = 'Enemy ' if first_pokemon.enemy else ''
+                    util.draw_text(f'{isEnemy}{first_pokemon.name}', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
+                    util.draw_text(f'attack missed!', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
 
                 case AttackState.LAST_ATTACK:
                     if last_pokemon.attack_accuracy(last_move, first_pokemon):
@@ -381,15 +385,13 @@ while run:
                                 util.draw_text(f"{stat_name} won't go any lower!", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
 
                 case AttackState.LAST_ATTACK_NOT_HIT:
-                    isEnemy = 'Enemy ' if first_pokemon.enemy else ''
-                    util.draw_text(f'{isEnemy}{first_pokemon.name}', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
-                    util.draw_text(f'avoided the attack', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
+                    isEnemy = 'Enemy ' if last_pokemon.enemy else ''
+                    util.draw_text(f'{isEnemy}{last_pokemon.name}', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
+                    util.draw_text(f'attack missed!', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
 
     pg.draw.line(move_panel, const.BLACK, (0, 0), (const.PANEL_WIDTH, 0), 2)
-    pg.draw.line(move_panel, const.BLACK, (0, 0), (0, const.PANEL_HEIGHT), 2)
     screen.blit(move_panel, move_panel_rect)
     pg.draw.line(attribute_panel, const.BLACK, (0, 0), (const.SCREEN_WIDTH - const.PANEL_WIDTH, 0), 2)
-    pg.draw.line(attribute_panel, const.BLACK, (0, 0), (0, const.PANEL_HEIGHT), 2)
     screen.blit(attribute_panel, attribute_panel_rect)
 
     for event in pg.event.get():
