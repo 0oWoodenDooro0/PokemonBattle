@@ -7,6 +7,7 @@ import pygame as pg
 
 import constants as const
 import util
+from attack_result import AttackResult
 from generation import Generation
 from health_bar import HealthBar
 from move import Move
@@ -145,48 +146,52 @@ class Pokemon:
         self.health_bar.update(self.hp)
 
     def attack(self, move: Move, defender_pokemon: 'Pokemon'):
-        critical: int | None = None
-        type_effectiveness: int | float | list | None = None
-        stat_change_list = []
-        print(move.category)
+        print(f'{move.category=}')
         match move.category:
             case 0:
-                critical, type_effectiveness, damage = self.damage_attack(move, defender_pokemon)
+                attack_result, damage = self.damage_attack(move, defender_pokemon)
                 defender_pokemon.hp -= damage
+                return attack_result
             case 2:
-                print(move.stat_chance)
+                print(f'{move.stat_chance=}')
                 match move.move_target:
                     case 10 | 11:
-                        stat_change_list = self.stat_change(move, defender_pokemon)
+                        return self.stat_change(move, defender_pokemon)
                     case 7:
-                        stat_change_list = self.stat_change(move, self)
+                        return self.stat_change(move, self)
                     case _:
                         print(move.move_target)
             case 3:
                 self.hp += math.floor(move.healing / 100 * self.stats[1])
                 if self.hp > self.stats[1]:
                     self.hp = self.stats[1]
+                return AttackResult(3)
             case 6:
-                critical, type_effectiveness, damage = self.damage_attack(move, defender_pokemon)
+                attack_result, damage = self.damage_attack(move, defender_pokemon)
                 defender_pokemon.hp -= damage
                 if self.stat_accuracy(move.stat_chance):
-                    stat_change_list = self.stat_change(move, defender_pokemon)
+                    return self.stat_change(move, defender_pokemon, attack_result)
+                return attack_result
             case 7:
-                critical, type_effectiveness, damage = self.damage_attack(move, defender_pokemon)
+                attack_result, damage = self.damage_attack(move, defender_pokemon)
                 defender_pokemon.hp -= damage
                 if self.stat_accuracy(move.stat_chance):
-                    stat_change_list = self.stat_change(move, self)
+                    return self.stat_change(move, self, attack_result)
+                return attack_result
             case 8:
-                critical, type_effectiveness, damage = self.damage_attack(move, defender_pokemon)
+                attack_result, damage = self.damage_attack(move, defender_pokemon)
                 defender_pokemon.hp -= damage
                 self.hp += math.floor(move.drain / 100 * damage)
                 if self.hp > self.stats[1]:
                     self.hp = self.stats[1]
+                return attack_result
+            case 9:
+                defender_pokemon.hp = 0
+                return AttackResult(9)
             case _:
                 print(move.category)
-        return critical, type_effectiveness, stat_change_list
 
-    def damage_attack(self, move: Move, defender_pokemon: 'Pokemon'):
+    def damage_attack(self, move: Move, defender_pokemon: 'Pokemon', attack_result: AttackResult = None):
         if move.crit_rate == 0:
             crit = self.basic_stats[6] / 2
         else:
@@ -214,10 +219,12 @@ class Pokemon:
                 damage = damage * 0
                 type_effectiveness = type_effectiveness * 0
         damage = 1 if math.floor(damage) <= 1 else math.floor(damage * random.randint(217, 255) / 255)
-        return critical, type_effectiveness, damage
+        if attack_result:
+            attack_result.set_damage_attack(is_critical=True if critical == 2 else False, type_effectiveness=type_effectiveness)
+        return AttackResult(move.category, is_critical=True if critical == 2 else False, type_effectiveness=type_effectiveness), damage
 
     @staticmethod
-    def stat_change(move: Move, target_pokemon: 'Pokemon'):
+    def stat_change(move: Move, target_pokemon: 'Pokemon', attack_result: AttackResult = None):
         stat_change_list = []
         for i in range(len(move.stat_changes)):
             stat_change = 0
@@ -250,8 +257,10 @@ class Pokemon:
                     case _:
                         print(move.stat_changes)
             stat_name = util.fetch_json('stat', str(move.stat_changes[i]["stat"]))
-            stat_change_list.append((target_pokemon, stat_name['name'].upper(), stat_change))
-        return stat_change_list
+            stat_change_list.append((stat_name['name'].upper(), stat_change))
+        if attack_result:
+            attack_result.set_stat_change(stat_change_target=target_pokemon, stat_change_list=stat_change_list)
+        return AttackResult(move.category, stat_change_target=target_pokemon, stat_change_list=stat_change_list)
 
     @staticmethod
     def stat_accuracy(stat_chance: int):
@@ -268,6 +277,8 @@ class Pokemon:
         d = defender_pokemon.get_stat_effect(8)
         a = b * c / d
         r = random.randint(1, 255)
+        if move.category == 9:
+            return True if r < b else False
         return True if r < a else False
 
     def add_experience(self, experience: int):
