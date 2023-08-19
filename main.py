@@ -232,14 +232,16 @@ while run:
                 case AttackState.FIRST_EFFECTIVE:
                     if attack_result.is_critical:
                         damage_time[0 if last_pokemon.enemy else 1] += 1
+                    isEnemy = 'Enemy ' if last_pokemon.enemy else ''
                     match attack_result.type_effectiveness:
                         case 2 | 4:
-                            util.draw_text(f"It's super effective!", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
+                            util.draw_text(f"It's super", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
+                            util.draw_text(f"effective!", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
                         case 0.5 | 0.25:
                             util.draw_text(f"It's not very", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
                             util.draw_text(f'effective...', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
                         case 0:
-                            util.draw_text(f"It's not effective...", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
+                            util.draw_text(f"{isEnemy}{last_pokemon.name}", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
                         case 1 | None:
                             attack_state = AttackState.FIRST_STAT_CHANGE
 
@@ -325,14 +327,17 @@ while run:
                 case AttackState.LAST_EFFECTIVE:
                     if attack_result.is_critical:
                         damage_time[0 if first_pokemon.enemy else 1] += 1
+                    isEnemy = 'Enemy ' if first_pokemon.enemy else ''
                     match attack_result.type_effectiveness:
                         case 2 | 4:
-                            util.draw_text(f"It's super effective!", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
+                            util.draw_text(f"It's super", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
+                            util.draw_text(f"effective!", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
                         case 0.5 | 0.25:
                             util.draw_text(f"It's not very", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
                             util.draw_text(f"effective...", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
                         case 0:
-                            util.draw_text(f"It's not effective...", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
+                            util.draw_text(f"It doesn't affect", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
+                            util.draw_text(f"{isEnemy}{first_pokemon.name}", MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
                         case 1 | None:
                             attack_state = AttackState.LAST_STAT_CHANGE
 

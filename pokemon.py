@@ -69,7 +69,7 @@ class Pokemon:
             if move_id in self.generation.moves and len(moves) < 4:
                 move_id = util.url_to_id(move['move']['url'], 'move')
                 move = Move(move_id)
-                if move.category in [0, 2, 3, 6, 8]:
+                if move.category in [0, 2, 3, 6, 8, 9]:
                     moves.append(move)
         return moves
 
