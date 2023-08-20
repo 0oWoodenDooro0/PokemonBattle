@@ -394,10 +394,14 @@ while run:
             print(battle_state, attack_state)
             match attack_state:
                 case AttackState.FIRST_ATTACK_HIT:
-                    if attack_result.is_critical:
-                        attack_state = AttackState.FIRST_CRICAL_HIT
-                    else:
-                        attack_state = AttackState.FIRST_EFFECTIVE
+                    match attack_result.move_category:
+                        case 2 | 6 | 7:
+                            if attack_result.is_critical:
+                                attack_state = AttackState.FIRST_CRICAL_HIT
+                            else:
+                                attack_state = AttackState.FIRST_EFFECTIVE
+                        case 0 | 6 | 7 | 8 | 9:
+                            attack_state = AttackState.FIRST_STAT_CHANGE
                 case AttackState.FIRST_CRICAL_HIT:
                     attack_state = AttackState.FIRST_EFFECTIVE
                 case AttackState.FIRST_EFFECTIVE:
@@ -405,10 +409,14 @@ while run:
                 case AttackState.FIRST_ATTACK_NOT_HIT:
                     attack_state = AttackState.LAST_ATTACK
                 case AttackState.LAST_ATTACK_HIT:
-                    if attack_result.is_critical:
-                        attack_state = AttackState.LAST_CRICAL_HIT
-                    else:
-                        attack_state = AttackState.LAST_EFFECTIVE
+                    match attack_result.move_category:
+                        case 2 | 6 | 7:
+                            if attack_result.is_critical:
+                                attack_state = AttackState.LAST_CRICAL_HIT
+                            else:
+                                attack_state = AttackState.LAST_EFFECTIVE
+                        case 0 | 6 | 7 | 8 | 9:
+                            attack_state = AttackState.LAST_STAT_CHANGE
                 case AttackState.LAST_CRICAL_HIT:
                     attack_state = AttackState.LAST_EFFECTIVE
                 case AttackState.LAST_EFFECTIVE:

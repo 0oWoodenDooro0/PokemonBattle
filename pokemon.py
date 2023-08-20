@@ -203,10 +203,9 @@ class Pokemon:
         attack: float = attack_stat * self.get_stat_effect(2)
         defense_stat: int = defender_pokemon.stats[3] if move.damage_class == 2 else defender_pokemon.stats[5] if move.damage_class == 3 else 0
         defense: float = defense_stat * self.get_stat_effect(3)
-        move_type: int = move.type
-        stab: float = 1.5 if move_type in self.types else 1
+        stab: float = 1.5 if move.type in self.types else 1
         damage: float = (((2 * self.level * critical) / 5 + 2) * power * attack / defense / 50 + 2) * stab
-        move_type_data: dict = util.fetch_json('type', str(move_type))['damage_relations']
+        move_type_data: dict = util.fetch_json('type', str(move.type))['damage_relations']
         type_effectiveness: float = 1
         for i in range(len(defender_pokemon.types)):
             if util.type_in_pokemon(move_type_data['double_damage_to'], defender_pokemon.types[i]):
@@ -278,6 +277,11 @@ class Pokemon:
         a: float = b * c / d
         r: int = random.randint(1, 255)
         if move.category == 9:
+            for pokemon_type in defender_pokemon.types:
+                if util.type_in_pokemon(util.fetch_json('type', str(move.type))['damage_relations']['no_damage_to'], pokemon_type):
+                    return False
+            if self.stats[6] < defender_pokemon.stats[6]:
+                return False
             return True if r < b else False
         return True if r < a else False
 
