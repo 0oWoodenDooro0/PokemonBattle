@@ -6,6 +6,7 @@ import pygame as pg
 
 import constants as const
 import util
+from battle import Battle
 from button import Button
 from generation import Generation
 from move import Move
@@ -52,6 +53,7 @@ generation: Generation = Generation(1)
 
 front_pokemon: Pokemon = Pokemon(7, generation, enemy=True)
 back_pokemon: Pokemon = Pokemon(15, generation)
+battle: Battle = Battle(front_pokemon, back_pokemon)
 
 selection_buttons: list[Button] = []
 selection_button_texts: list[str] = ['FIGHT', 'BAG', 'POKEMON', 'RUN']
@@ -205,8 +207,8 @@ while run:
         case BattleState.ATTACK:
             match attack_state:
                 case AttackState.FIRST_ATTACK:
-                    if first_pokemon.attack_accuracy(first_move, last_pokemon):
-                        attack_result = first_pokemon.attack(first_move, last_pokemon)
+                    if battle.attack_accuracy(first_pokemon, first_move, last_pokemon):
+                        attack_result = battle.attack(first_pokemon, first_move, last_pokemon)
                         print(attack_result)
                         match attack_result.move_category:
                             case 2 | 6 | 7:
@@ -259,7 +261,6 @@ while run:
                         isEnemy: str = 'Enemy ' if target_pokemon.enemy else ''
                         match attack_result.stat_change_list[stat_change_num - 1]:
                             case (stat_name, 1):
-
                                 util.draw_text(f'{isEnemy}{target_pokemon.name}', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_1, move_panel, mid_left=True)
                                 util.draw_text(f'{stat_name} rose!', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
                             case (stat_name, 2):
@@ -293,8 +294,8 @@ while run:
                     util.draw_text(f'attack missed!', MESSAGE_FONT, const.BLACK, const.MESSAGE_POS_LINE_2, move_panel, mid_left=True)
 
                 case AttackState.LAST_ATTACK:
-                    if last_pokemon.attack_accuracy(last_move, first_pokemon):
-                        attack_result = last_pokemon.attack(last_move, first_pokemon)
+                    if battle.attack_accuracy(first_pokemon, last_move, first_pokemon):
+                        attack_result = battle.attack(last_pokemon, last_move, first_pokemon)
                         print(attack_result)
                         match attack_result.move_category:
                             case 2 | 6 | 7:
@@ -391,17 +392,17 @@ while run:
         if event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
             run = False
         if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
-            print(battle_state, attack_state)
             match attack_state:
                 case AttackState.FIRST_ATTACK_HIT:
+                    print(f'{attack_result.move_category=}')
                     match attack_result.move_category:
                         case 2 | 6 | 7:
+                            attack_state = AttackState.FIRST_STAT_CHANGE
+                        case 0 | 6 | 7 | 8 | 9:
                             if attack_result.is_critical:
                                 attack_state = AttackState.FIRST_CRICAL_HIT
                             else:
                                 attack_state = AttackState.FIRST_EFFECTIVE
-                        case 0 | 6 | 7 | 8 | 9:
-                            attack_state = AttackState.FIRST_STAT_CHANGE
                 case AttackState.FIRST_CRICAL_HIT:
                     attack_state = AttackState.FIRST_EFFECTIVE
                 case AttackState.FIRST_EFFECTIVE:
@@ -411,20 +412,22 @@ while run:
                 case AttackState.LAST_ATTACK_HIT:
                     match attack_result.move_category:
                         case 2 | 6 | 7:
+                            attack_state = AttackState.LAST_STAT_CHANGE
+                        case 0 | 6 | 7 | 8 | 9:
                             if attack_result.is_critical:
                                 attack_state = AttackState.LAST_CRICAL_HIT
                             else:
                                 attack_state = AttackState.LAST_EFFECTIVE
-                        case 0 | 6 | 7 | 8 | 9:
-                            attack_state = AttackState.LAST_STAT_CHANGE
                 case AttackState.LAST_CRICAL_HIT:
                     attack_state = AttackState.LAST_EFFECTIVE
                 case AttackState.LAST_EFFECTIVE:
                     attack_state = AttackState.LAST_STAT_CHANGE
                 case AttackState.LAST_ATTACK_NOT_HIT:
                     battle_state = BattleState.SELECTION
+                    attack_state = AttackState.FIRST_ATTACK
                 case AttackState.FIRST_STAT_CHANGE | AttackState.LAST_STAT_CHANGE:
                     stat_change_num -= 1
+            print(battle_state, attack_state)
             match battle_state:
                 case BattleState.DEFEAT:
                     back_pokemon.add_experience(util.get_battle_experience(front_pokemon))

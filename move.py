@@ -30,5 +30,5 @@ class Move:
         self.max_pp: int = self.data['pp']
         self.priority: int = self.data['priority']
         self.stat_changes: list = [{'stat': util.url_to_id(x['stat']['url'], 'stat'), 'change': x['change']} for x in self.data['stat_changes']]
-        self.move_target: int = util.url_to_id(self.data['target']['url'], 'move-target')
+        self.target: int = util.url_to_id(self.data['target']['url'], 'move-target')
         self.type: int = util.url_to_id(self.data['type']['url'], 'type')
