@@ -32,7 +32,7 @@ class Battle:
         self.attribute_panel_rect: pg.Rect = self.attribute_panel.get_rect()
         self.attribute_panel_rect.topleft = (const.PANEL_WIDTH, const.SCREEN_HEIGHT - const.PANEL_HEIGHT)
 
-        self.move_panel: pg.Surface = pg.Surface((const.PANEL_WIDTH, const.PANEL_HEIGHT))
+        self.move_panel: pg.Surface = pg.Surface((const.SCREEN_WIDTH, const.PANEL_HEIGHT))
         self.move_panel_rect: pg.Rect = self.move_panel.get_rect()
         self.move_panel_rect.topleft = (0, const.SCREEN_HEIGHT - const.PANEL_HEIGHT)
 
@@ -76,6 +76,7 @@ class Battle:
         self.attack_result: Optional[MoveResult] = None
         self.stat_change_num: int = 0
         self.damage_time: list[int, int] = [0, 0]
+        self.text_time: int = 0
 
         self.button_select_sound: pg.mixer.Sound = pg.mixer.Sound(os.path.join('sound_effect', 'Button Select.wav'))
         self.hurt_sound: pg.mixer.Sound = pg.mixer.Sound(os.path.join('sound_effect', 'Hurt.wav'))
@@ -137,8 +138,7 @@ class Battle:
                     self.battle_state = BattleState.SELECTION
 
             case BattleState.SELECTION:
-                util.draw_text('What will', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                util.draw_text(f'{self.back_pokemon.name} do?', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                self.animate_text(f'What will\n{self.back_pokemon.name} do?')
 
             case BattleState.FIGHT:
                 for i in range(len(self.back_pokemon.moves)):
@@ -151,7 +151,7 @@ class Battle:
                         self.button_select_sound.play()
                         self.back_move = self.back_pokemon.moves[i]
                         self.front_move = random.choice(self.front_pokemon.moves)
-                        if self.back_is_first_speed():
+                        if self.is_back_have_the_fastest_speed():
                             self.first_move = self.back_move
                             self.first_pokemon = self.back_pokemon
                             self.last_move = self.front_move
@@ -177,17 +177,13 @@ class Battle:
                 self.damage_time = [0, 0]
                 if self.front_pokemon.hp == 0:
                     is_enemy: str = 'Enemy ' if self.front_pokemon.enemy else ''
-                    util.draw_text(f'{is_enemy}{self.front_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                    util.draw_text(f'fainted!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                    self.animate_text(f'{is_enemy}{self.front_pokemon.name}\nfainted!')
                 elif self.back_pokemon.hp == 0:
                     is_enemy: str = 'Enemy ' if self.back_pokemon.enemy else ''
-                    util.draw_text(f'{is_enemy}{self.back_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                    util.draw_text(f'fainted!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                    self.animate_text(f'{is_enemy}{self.back_pokemon.name}\nfainted!')
 
             case BattleState.EXP:
-                util.draw_text(f'{self.back_pokemon.name} gained', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                util.draw_text(f'{util.get_battle_experience(self.front_pokemon)} EXP. Points!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel,
-                               mid_left=True)
+                self.animate_text(f'{self.back_pokemon.name} gained\n{util.get_battle_experience(self.front_pokemon)} EXP. Points!')
 
             case BattleState.ATTACK:
                 match self.attack_state:
@@ -201,20 +197,21 @@ class Battle:
                                 case 0 | 6 | 7 | 8 | 9:
                                     self.hurt_sound.play()
                             self.attack_state = AttackState.FIRST_ATTACK_HIT
+                            self.text_time = 1
                         else:
                             self.attack_state = AttackState.FIRST_ATTACK_NOT_HIT
+                            self.text_time = 1
 
                     case AttackState.FIRST_ATTACK_HIT:
                         if self.attack_result.is_critical:
                             self.damage_time[0 if self.last_pokemon.enemy else 1] += 1
                         is_enemy: str = 'Enemy ' if self.first_pokemon.enemy else ''
-                        util.draw_text(f'{is_enemy}{self.first_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                        util.draw_text(f'used {self.first_move.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                        self.animate_text(f'{is_enemy}{self.first_pokemon.name}\nused {self.first_move.name}')
 
                     case AttackState.FIRST_CRICAL_HIT:
                         if self.attack_result.is_critical:
                             self.damage_time[0 if self.last_pokemon.enemy else 1] += 1
-                        util.draw_text(f"Critical hit!", self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
+                        self.animate_text(f'Critical hit!')
 
                     case AttackState.FIRST_EFFECTIVE:
                         if self.attack_result.is_critical:
@@ -222,20 +219,21 @@ class Battle:
                         is_enemy: str = 'Enemy ' if self.last_pokemon.enemy else ''
                         match self.attack_result.type_effectiveness:
                             case 2 | 4:
-                                util.draw_text(f"It's super", self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                util.draw_text(f"effective!", self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                self.animate_text(f"It's super\neffective!")
                             case 0.5 | 0.25:
-                                util.draw_text(f"It's not very", self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                util.draw_text(f'effective...', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                self.animate_text(f"It's not very\neffective...")
                             case 0:
-                                util.draw_text(f"{is_enemy}{self.last_pokemon.name}", self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                self.animate_text(f'{is_enemy}{self.last_pokemon.name}')
                             case 1 | None:
                                 self.attack_state = AttackState.FIRST_STAT_CHANGE
+                                self.text_time = 1
 
                         if self.front_pokemon.hp == 0:
                             self.battle_state = BattleState.DEFEAT
+                            self.text_time = 1
                         elif self.back_pokemon.hp == 0:
                             self.battle_state = BattleState.DEFEAT
+                            self.text_time = 1
 
                     case AttackState.FIRST_STAT_CHANGE:
                         self.damage_time = [0, 0]
@@ -246,37 +244,27 @@ class Battle:
                             is_enemy: str = 'Enemy ' if target_pokemon.enemy else ''
                             match self.attack_result.stat_change_list[self.stat_change_num - 1]:
                                 case (stat_name, 1):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f'{stat_name} rose!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} rose!')
                                 case (stat_name, 2):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f'{stat_name} rose sharply!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} rose sharply!!')
                                 case (stat_name, 3):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f'{stat_name} rose drastically!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} rose drastically!!!')
                                 case (stat_name, 4):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f'maxed its {stat_name}!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\nmaxed its {stat_name}!!!!')
                                 case (stat_name, 6):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f'{stat_name} fell!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} fell!')
                                 case (stat_name, 7):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f'{stat_name} harshly fell!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} harshly fell!!')
                                 case (stat_name, 8):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f'{stat_name} severely fell!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} severely fell!!!')
                                 case (stat_name, 9):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f"{stat_name} won't go any higher!", self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f"{is_enemy}{target_pokemon.name}\n{stat_name} won't go any higher!")
                                 case (stat_name, 10):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f"{stat_name} won't go any lower!", self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f"{is_enemy}{target_pokemon.name}\n{stat_name} won't go any lower!")
 
                     case AttackState.FIRST_ATTACK_NOT_HIT:
                         is_enemy: str = 'Enemy ' if self.first_pokemon.enemy else ''
-                        util.draw_text(f'{is_enemy}{self.first_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                        util.draw_text(f'attack missed!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                        self.animate_text(f'{is_enemy}{self.first_pokemon.name}\nattack missed!')
 
                     case AttackState.LAST_ATTACK:
                         if self.attack_accuracy(self.first_pokemon, self.last_move, self.first_pokemon):
@@ -288,20 +276,21 @@ class Battle:
                                 case 0 | 6 | 7 | 8 | 9:
                                     self.hurt_sound.play()
                             self.attack_state = AttackState.LAST_ATTACK_HIT
+                            self.text_time = 1
                         else:
                             self.attack_state = AttackState.LAST_ATTACK_NOT_HIT
+                            self.text_time = 1
 
                     case AttackState.LAST_ATTACK_HIT:
                         if self.attack_result.is_critical:
                             self.damage_time[0 if self.first_pokemon.enemy else 1] += 1
                         is_enemy: str = 'Enemy ' if self.last_pokemon.enemy else ''
-                        util.draw_text(f'{is_enemy}{self.last_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                        util.draw_text(f'used {self.last_move.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                        self.animate_text(f'{is_enemy}{self.last_pokemon.name}\nused {self.last_move.name}')
 
                     case AttackState.LAST_CRICAL_HIT:
                         if self.attack_result.is_critical:
                             self.damage_time[0 if self.first_pokemon.enemy else 1] += 1
-                        util.draw_text(f"Critical Hit!", self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
+                        self.animate_text(f'Critical hit!')
 
                     case AttackState.LAST_EFFECTIVE:
                         if self.attack_result.is_critical:
@@ -309,16 +298,14 @@ class Battle:
                         is_enemy: str = 'Enemy ' if self.first_pokemon.enemy else ''
                         match self.attack_result.type_effectiveness:
                             case 2 | 4:
-                                util.draw_text(f"It's super", self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                util.draw_text(f"effective!", self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                self.animate_text(f"It's super\neffective!")
                             case 0.5 | 0.25:
-                                util.draw_text(f"It's not very", self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                util.draw_text(f"effective...", self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                self.animate_text(f"It's not very\neffective...")
                             case 0:
-                                util.draw_text(f"It doesn't affect", self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                util.draw_text(f"{is_enemy}{self.first_pokemon.name}", self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                self.animate_text(f'{is_enemy}{self.first_pokemon.name}')
                             case 1 | None:
                                 self.attack_state = AttackState.LAST_STAT_CHANGE
+                                self.text_time = 1
 
                         if self.front_pokemon.hp == 0:
                             self.battle_state = BattleState.DEFEAT
@@ -334,37 +321,27 @@ class Battle:
                             is_enemy = 'Enemy ' if target_pokemon.enemy else ''
                             match self.attack_result.stat_change_list[self.stat_change_num - 1]:
                                 case (stat_name, 1):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f'{stat_name} rose!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} rose!')
                                 case (stat_name, 2):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f'{stat_name} rose sharply!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} rose sharply!!')
                                 case (stat_name, 3):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f'{stat_name} rose drastically!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} rose drastically!!!')
                                 case (stat_name, 4):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f'maxed its {stat_name}!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\nmaxed its {stat_name}!!!!')
                                 case (stat_name, 6):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f'{stat_name} fell!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} fell!')
                                 case (stat_name, 7):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f'{stat_name} harshly fell!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} harshly fell!!')
                                 case (stat_name, 8):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f'{stat_name} severely fell!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} severely fell!!!')
                                 case (stat_name, 9):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f"{stat_name} won't go any higher!", self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f"{is_enemy}{target_pokemon.name}\n{stat_name} won't go any higher!")
                                 case (stat_name, 10):
-                                    util.draw_text(f'{is_enemy}{target_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                                    util.draw_text(f"{stat_name} won't go any lower!", self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                                    self.animate_text(f"{is_enemy}{target_pokemon.name}\n{stat_name} won't go any lower!")
 
                     case AttackState.LAST_ATTACK_NOT_HIT:
                         is_enemy: str = 'Enemy ' if self.last_pokemon.enemy else ''
-                        util.draw_text(f'{is_enemy}{self.last_pokemon.name}', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                        util.draw_text(f'attack missed!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                        self.animate_text(f'{is_enemy}{self.last_pokemon.name}\nattack missed!')
 
         pg.draw.line(self.move_panel, const.BLACK, (0, 0), (const.PANEL_WIDTH, 0), 2)
         screen.blit(self.move_panel, self.move_panel_rect)
@@ -372,50 +349,67 @@ class Battle:
         screen.blit(self.attribute_panel, self.attribute_panel_rect)
 
     def mouse_click(self):
+        if self.text_time != -1:
+            self.text_time = -1
+            return
         match self.attack_state:
             case AttackState.FIRST_ATTACK_HIT:
                 print(f'{self.attack_result.move_category=}')
                 match self.attack_result.move_category:
                     case 2 | 6 | 7:
                         self.attack_state = AttackState.FIRST_STAT_CHANGE
+                        self.text_time = 1
                     case 0 | 6 | 7 | 8 | 9:
                         if self.attack_result.is_critical:
                             self.attack_state = AttackState.FIRST_CRICAL_HIT
+                            self.text_time = 1
                         else:
                             self.attack_state = AttackState.FIRST_EFFECTIVE
+                            self.text_time = 1
             case AttackState.FIRST_CRICAL_HIT:
                 self.attack_state = AttackState.FIRST_EFFECTIVE
+                self.text_time = 1
             case AttackState.FIRST_EFFECTIVE:
                 self.attack_state = AttackState.FIRST_STAT_CHANGE
+                self.text_time = 1
             case AttackState.FIRST_ATTACK_NOT_HIT:
                 self.attack_state = AttackState.LAST_ATTACK
+                self.text_time = 1
             case AttackState.LAST_ATTACK_HIT:
                 match self.attack_result.move_category:
                     case 2 | 6 | 7:
                         self.attack_state = AttackState.LAST_STAT_CHANGE
+                        self.text_time = 1
                     case 0 | 6 | 7 | 8 | 9:
                         if self.attack_result.is_critical:
                             self.attack_state = AttackState.LAST_CRICAL_HIT
+                            self.text_time = 1
                         else:
                             self.attack_state = AttackState.LAST_EFFECTIVE
+                            self.text_time = 1
             case AttackState.LAST_CRICAL_HIT:
                 self.attack_state = AttackState.LAST_EFFECTIVE
+                self.text_time = 1
             case AttackState.LAST_EFFECTIVE:
                 self.attack_state = AttackState.LAST_STAT_CHANGE
+                self.text_time = 1
             case AttackState.LAST_ATTACK_NOT_HIT:
                 self.battle_state = BattleState.SELECTION
                 self.attack_state = AttackState.FIRST_ATTACK
+                self.text_time = 1
             case AttackState.FIRST_STAT_CHANGE | AttackState.LAST_STAT_CHANGE:
                 self.stat_change_num -= 1
+                self.text_time = 1
         print(self.battle_state, self.attack_state)
         match self.battle_state:
             case BattleState.DEFEAT:
                 self.back_pokemon.add_experience(util.get_battle_experience(self.front_pokemon))
                 self.battle_state = BattleState.EXP
+                self.text_time = 1
             case BattleState.EXP:
                 self.run = False
 
-    def back_is_first_speed(self) -> bool:
+    def is_back_have_the_fastest_speed(self) -> bool:
         if self.back_move.priority > self.front_move.priority:
             return True
         elif self.back_move.priority < self.front_move.priority:
@@ -425,6 +419,14 @@ class Battle:
                 return True
             else:
                 return False
+
+    def animate_text(self, text: str):
+        if self.text_time == -1 or self.text_time >= len(text):
+            util.load_text(text, self.message_font, self.move_panel)
+            self.text_time = -1
+        else:
+            util.load_text(text[:self.text_time], self.message_font, self.move_panel)
+            self.text_time += 1
 
     def attack(self, attck_pokemon: 'Pokemon', move: Move, defender_pokemon: 'Pokemon') -> MoveResult:
         print(f'{move.category=}')

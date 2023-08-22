@@ -6,6 +6,7 @@ from typing import Any
 import pygame as pg
 import requests as requests
 
+import constants as const
 from pokemon import Pokemon
 
 
@@ -60,3 +61,10 @@ def type_in_pokemon(data: list, pokemon_type: int) -> bool:
 
 def get_battle_experience(defender_pokemon: Pokemon) -> int:
     return math.floor(defender_pokemon.base_experience * defender_pokemon.level / 7)
+
+
+def load_text(text: str, font: pg.font.Font, surface: pg.Surface):
+    lines = text.split('\n')
+    for i in range(len(lines)):
+        line_pos = const.MESSAGE_POS_LINE_1 if i == 0 else const.MESSAGE_POS_LINE_2
+        draw_text(lines[i], font, const.BLACK, line_pos, surface, mid_left=True)
