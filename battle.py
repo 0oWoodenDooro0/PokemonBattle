@@ -53,15 +53,13 @@ class Battle:
             y: int = const.SCREEN_HEIGHT - const.PANEL_HEIGHT // 4 * (3 if i // 2 == 0 else 1)
             move_button: Button = Button((x, y), self.move_button_image, check_mouse_on=True, center=True)
             self.move_buttons.append(move_button)
-        self.front_pokemon = front_pokemon
-        self.back_pokemon = back_pokemon
+        self.front_pokemon: Pokemon = front_pokemon
+        self.back_pokemon: Pokemon = back_pokemon
         self.front_data: dict = {
-            'pokemon': front_pokemon,
             'value_image': front_value_image,
             'value_image_rect': front_value_image_rect
         }
         self.back_data: dict = {
-            'pokemon': back_pokemon,
             'value_image': back_value_image,
             'value_image_rect': back_value_image_rect
         }
@@ -94,16 +92,15 @@ class Battle:
         if self.battle_state is not BattleState.PREBATTLE:
             screen.blit(self.front_data.get('value_image'), self.front_data.get('value_image_rect'))
             screen.blit(self.back_data.get('value_image'), self.back_data.get('value_image_rect'))
-            front_pokemon: Pokemon = self.front_data.get('pokemon')
-            back_pokemon: Pokemon = self.back_data.get('pokemon')
-            front_pokemon.draw_health_bar(screen)
-            back_pokemon.draw_health_bar(screen)
+            self.front_pokemon.draw_health_bar(screen)
+            self.back_pokemon.draw_health_bar(screen)
 
-            util.draw_text(front_pokemon.name, self.text_font, const.BLACK, (const.FRONT_VALUE_POS[0] - 150, const.FRONT_VALUE_POS[1] - 50), screen)
-            util.draw_text(f'Lv{front_pokemon.level}', self.text_font, const.BLACK, (const.FRONT_VALUE_POS[0] + 40, const.FRONT_VALUE_POS[1] - 50), screen)
-            util.draw_text(back_pokemon.name, self.text_font, const.BLACK, (const.BACK_VALUE_POS[0] - 150 + 64, const.BACK_VALUE_POS[1] - 50), screen)
-            util.draw_text(f'Lv{back_pokemon.level}', self.text_font, const.BLACK, (const.BACK_VALUE_POS[0] + 40 + 64, const.BACK_VALUE_POS[1] - 50), screen)
-            util.draw_text(f'{back_pokemon.hp}/{back_pokemon.stats[1]}', self.text_font, const.BLACK, (const.BACK_VALUE_POS[0] + 70, const.BACK_VALUE_POS[1] + 40), screen, True)
+            util.draw_text(self.front_pokemon.name, self.text_font, const.BLACK, (const.FRONT_VALUE_POS[0] - 150, const.FRONT_VALUE_POS[1] - 50), screen)
+            util.draw_text(f'Lv{self.front_pokemon.level}', self.text_font, const.BLACK, (const.FRONT_VALUE_POS[0] + 40, const.FRONT_VALUE_POS[1] - 50), screen)
+            util.draw_text(self.back_pokemon.name, self.text_font, const.BLACK, (const.BACK_VALUE_POS[0] - 150 + 64, const.BACK_VALUE_POS[1] - 50), screen)
+            util.draw_text(f'Lv{self.back_pokemon.level}', self.text_font, const.BLACK, (const.BACK_VALUE_POS[0] + 40 + 64, const.BACK_VALUE_POS[1] - 50), screen)
+            util.draw_text(f'{self.back_pokemon.hp}/{self.back_pokemon.stats[1]}', self.text_font, const.BLACK, (const.BACK_VALUE_POS[0] + 70, const.BACK_VALUE_POS[1] + 40),
+                           screen, True)
 
         if self.battle_state is BattleState.SELECTION or self.battle_state is BattleState.FIGHT:
             pg.draw.line(screen, const.BLACK, (const.PANEL_WIDTH, const.SCREEN_HEIGHT - const.PANEL_HEIGHT), (const.PANEL_WIDTH, const.SCREEN_HEIGHT), 2)
@@ -154,26 +151,16 @@ class Battle:
                         self.button_select_sound.play()
                         self.back_move = self.back_pokemon.moves[i]
                         self.front_move = random.choice(self.front_pokemon.moves)
-                        if self.back_move.priority > self.front_move.priority:
+                        if self.back_is_first_speed():
                             self.first_move = self.back_move
                             self.first_pokemon = self.back_pokemon
                             self.last_move = self.front_move
                             self.last_pokemon = self.front_pokemon
-                        elif self.back_move.priority < self.front_move.priority:
-                            self.first_move = self.back_move
-                            self.first_pokemon = self.back_pokemon
-                            self.last_move = self.front_move
                         else:
-                            if self.back_pokemon.stats[6] >= self.front_pokemon.stats[6]:
-                                self.first_move = self.back_move
-                                self.first_pokemon = self.back_pokemon
-                                self.last_move = self.front_move
-                                self.last_pokemon = self.front_pokemon
-                            else:
-                                self.first_move = self.front_move
-                                self.first_pokemon = self.front_pokemon
-                                self.last_move = self.back_move
-                                self.last_pokemon = self.back_pokemon
+                            self.first_move = self.front_move
+                            self.first_pokemon = self.front_pokemon
+                            self.last_move = self.back_move
+                            self.last_pokemon = self.back_pokemon
                         self.back_move.pp -= 1
                         self.battle_state = BattleState.ATTACK
                         self.attack_state = AttackState.FIRST_ATTACK
@@ -199,7 +186,8 @@ class Battle:
 
             case BattleState.EXP:
                 util.draw_text(f'{self.back_pokemon.name} gained', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_1, self.move_panel, mid_left=True)
-                util.draw_text(f'{util.get_battle_experience(self.front_pokemon)} EXP. Points!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel, mid_left=True)
+                util.draw_text(f'{util.get_battle_experience(self.front_pokemon)} EXP. Points!', self.message_font, const.BLACK, const.MESSAGE_POS_LINE_2, self.move_panel,
+                               mid_left=True)
 
             case BattleState.ATTACK:
                 match self.attack_state:
@@ -426,6 +414,17 @@ class Battle:
                 self.battle_state = BattleState.EXP
             case BattleState.EXP:
                 self.run = False
+
+    def back_is_first_speed(self) -> bool:
+        if self.back_move.priority > self.front_move.priority:
+            return True
+        elif self.back_move.priority < self.front_move.priority:
+            return False
+        else:
+            if self.back_pokemon.stats[6] >= self.front_pokemon.stats[6]:
+                return True
+            else:
+                return False
 
     def attack(self, attck_pokemon: 'Pokemon', move: Move, defender_pokemon: 'Pokemon') -> MoveResult:
         print(f'{move.category=}')
