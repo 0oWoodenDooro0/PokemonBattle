@@ -31,61 +31,19 @@ pg.mixer.music.load(os.path.join('soundtrack', 'Battle Music.mp3'))
 pg.mixer.music.set_volume(0.05)
 pg.mixer.music.play(loops=-1)
 
-run: bool = True
-while run:
+while battle.run:
     clock.tick(FPS)
 
     screen.fill(const.GREY)
 
-    battle.update(screen, run)
+    battle.update(screen)
 
     for event in pg.event.get():
         if event.type == pg.QUIT:
-            run = False
+            battle.run = False
         if event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
-            run = False
+            battle.run = False
         if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
-            match battle.attack_state:
-                case AttackState.FIRST_ATTACK_HIT:
-                    print(f'{battle.attack_result.move_category=}')
-                    match battle.attack_result.move_category:
-                        case 2 | 6 | 7:
-                            battle.attack_state = AttackState.FIRST_STAT_CHANGE
-                        case 0 | 6 | 7 | 8 | 9:
-                            if battle.attack_result.is_critical:
-                                battle.attack_state = AttackState.FIRST_CRICAL_HIT
-                            else:
-                                battle.attack_state = AttackState.FIRST_EFFECTIVE
-                case AttackState.FIRST_CRICAL_HIT:
-                    battle.attack_state = AttackState.FIRST_EFFECTIVE
-                case AttackState.FIRST_EFFECTIVE:
-                    battle.attack_state = AttackState.FIRST_STAT_CHANGE
-                case AttackState.FIRST_ATTACK_NOT_HIT:
-                    battle.attack_state = AttackState.LAST_ATTACK
-                case AttackState.LAST_ATTACK_HIT:
-                    match battle.attack_result.move_category:
-                        case 2 | 6 | 7:
-                            battle.attack_state = AttackState.LAST_STAT_CHANGE
-                        case 0 | 6 | 7 | 8 | 9:
-                            if battle.attack_result.is_critical:
-                                battle.attack_state = AttackState.LAST_CRICAL_HIT
-                            else:
-                                battle.attack_state = AttackState.LAST_EFFECTIVE
-                case AttackState.LAST_CRICAL_HIT:
-                    battle.attack_state = AttackState.LAST_EFFECTIVE
-                case AttackState.LAST_EFFECTIVE:
-                    battle.attack_state = AttackState.LAST_STAT_CHANGE
-                case AttackState.LAST_ATTACK_NOT_HIT:
-                    battle.battle_state = BattleState.SELECTION
-                    battle.attack_state = AttackState.FIRST_ATTACK
-                case AttackState.FIRST_STAT_CHANGE | AttackState.LAST_STAT_CHANGE:
-                    battle.stat_change_num -= 1
-            print(battle.battle_state, battle.attack_state)
-            match battle.battle_state:
-                case BattleState.DEFEAT:
-                    battle.back_pokemon.add_experience(util.get_battle_experience(front_pokemon))
-                    battle.battle_state = BattleState.EXP
-                case BattleState.EXP:
-                    run = False
+            battle.mouse_click()
 
     pg.display.flip()

@@ -82,9 +82,11 @@ class Battle:
         self.button_select_sound: pg.mixer.Sound = pg.mixer.Sound(os.path.join('sound_effect', 'Button Select.wav'))
         self.hurt_sound: pg.mixer.Sound = pg.mixer.Sound(os.path.join('sound_effect', 'Hurt.wav'))
 
+        self.run = True
+
         util.fetch_all_stat()
 
-    def update(self, screen: pg.Surface, run: bool):
+    def update(self, screen: pg.Surface):
 
         self.move_panel.fill(const.WHITE)
         self.attribute_panel.fill(const.WHITE)
@@ -120,7 +122,7 @@ class Battle:
                         case 2:
                             pass
                         case 3:
-                            run = False
+                            self.run = False
             pg.draw.line(self.attribute_panel, const.BLACK, (0, 0), (0, const.PANEL_HEIGHT), 2)
 
         if self.damage_time[0] % 20 < 10 or self.damage_time[0] > 60:
@@ -380,6 +382,50 @@ class Battle:
         screen.blit(self.move_panel, self.move_panel_rect)
         pg.draw.line(self.attribute_panel, const.BLACK, (0, 0), (const.SCREEN_WIDTH - const.PANEL_WIDTH, 0), 2)
         screen.blit(self.attribute_panel, self.attribute_panel_rect)
+
+    def mouse_click(self):
+        match self.attack_state:
+            case AttackState.FIRST_ATTACK_HIT:
+                print(f'{self.attack_result.move_category=}')
+                match self.attack_result.move_category:
+                    case 2 | 6 | 7:
+                        self.attack_state = AttackState.FIRST_STAT_CHANGE
+                    case 0 | 6 | 7 | 8 | 9:
+                        if self.attack_result.is_critical:
+                            self.attack_state = AttackState.FIRST_CRICAL_HIT
+                        else:
+                            self.attack_state = AttackState.FIRST_EFFECTIVE
+            case AttackState.FIRST_CRICAL_HIT:
+                self.attack_state = AttackState.FIRST_EFFECTIVE
+            case AttackState.FIRST_EFFECTIVE:
+                self.attack_state = AttackState.FIRST_STAT_CHANGE
+            case AttackState.FIRST_ATTACK_NOT_HIT:
+                self.attack_state = AttackState.LAST_ATTACK
+            case AttackState.LAST_ATTACK_HIT:
+                match self.attack_result.move_category:
+                    case 2 | 6 | 7:
+                        self.attack_state = AttackState.LAST_STAT_CHANGE
+                    case 0 | 6 | 7 | 8 | 9:
+                        if self.attack_result.is_critical:
+                            self.attack_state = AttackState.LAST_CRICAL_HIT
+                        else:
+                            self.attack_state = AttackState.LAST_EFFECTIVE
+            case AttackState.LAST_CRICAL_HIT:
+                self.attack_state = AttackState.LAST_EFFECTIVE
+            case AttackState.LAST_EFFECTIVE:
+                self.attack_state = AttackState.LAST_STAT_CHANGE
+            case AttackState.LAST_ATTACK_NOT_HIT:
+                self.battle_state = BattleState.SELECTION
+                self.attack_state = AttackState.FIRST_ATTACK
+            case AttackState.FIRST_STAT_CHANGE | AttackState.LAST_STAT_CHANGE:
+                self.stat_change_num -= 1
+        print(self.battle_state, self.attack_state)
+        match self.battle_state:
+            case BattleState.DEFEAT:
+                self.back_pokemon.add_experience(util.get_battle_experience(self.front_pokemon))
+                self.battle_state = BattleState.EXP
+            case BattleState.EXP:
+                self.run = False
 
     def attack(self, attck_pokemon: 'Pokemon', move: Move, defender_pokemon: 'Pokemon') -> MoveResult:
         print(f'{move.category=}')
