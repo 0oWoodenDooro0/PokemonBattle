@@ -65,18 +65,21 @@ class Battle:
         }
 
         self.battle_state: BattleState = BattleState.PREBATTLE
-        self.attack_state: AttackState = AttackState.FIRST_ATTACK
+        self.attack_state: AttackState = AttackState.ATTACK
 
         self.back_move: Optional[Move] = None
         self.front_move: Optional[Move] = None
-        self.first_move: Optional[Move] = None
-        self.first_pokemon: Optional[Pokemon] = None
-        self.last_move: Optional[Move] = None
-        self.last_pokemon: Optional[Pokemon] = None
+
+        self.attacker: Optional[Pokemon] = None
+        self.defender: Optional[Pokemon] = None
+        self.attack_move: Optional[Move] = None
+
         self.attack_result: Optional[MoveResult] = None
         self.stat_change_num: int = 0
         self.damage_time: list[int, int] = [0, 0]
         self.text_time: int = 0
+        self.first_move_is_back: bool = True
+        self.is_first_turn: bool = True
 
         self.button_select_sound: pg.mixer.Sound = pg.mixer.Sound(os.path.join('sound_effect', 'Button Select.wav'))
         self.hurt_sound: pg.mixer.Sound = pg.mixer.Sound(os.path.join('sound_effect', 'Hurt.wav'))
@@ -151,19 +154,11 @@ class Battle:
                         self.button_select_sound.play()
                         self.back_move = self.back_pokemon.moves[i]
                         self.front_move = random.choice(self.front_pokemon.moves)
-                        if self.is_back_have_the_fastest_speed():
-                            self.first_move = self.back_move
-                            self.first_pokemon = self.back_pokemon
-                            self.last_move = self.front_move
-                            self.last_pokemon = self.front_pokemon
-                        else:
-                            self.first_move = self.front_move
-                            self.first_pokemon = self.front_pokemon
-                            self.last_move = self.back_move
-                            self.last_pokemon = self.back_pokemon
+                        self.first_move_is_back = self.is_back_have_the_fastest_speed()
                         self.back_move.pp -= 1
                         self.battle_state = BattleState.ATTACK
-                        self.attack_state = AttackState.FIRST_ATTACK
+                        self.attack_state = AttackState.ATTACK
+                        self.is_first_turn = True
                         self.damage_time = [0, 0]
                     elif button_click[1]:
                         self.attribute_panel.fill(const.WHITE)
@@ -187,45 +182,52 @@ class Battle:
 
             case BattleState.ATTACK:
                 match self.attack_state:
-                    case AttackState.FIRST_ATTACK:
-                        if self.attack_accuracy(self.first_pokemon, self.first_move, self.last_pokemon):
-                            self.attack_result = self.attack(self.first_pokemon, self.first_move, self.last_pokemon)
-                            print(self.attack_result)
+                    case AttackState.ATTACK:
+                        if self.first_move_is_back and self.is_first_turn or not self.first_move_is_back and not self.is_first_turn:
+                            self.attacker = self.back_pokemon
+                            self.defender = self.front_pokemon
+                            self.attack_move = self.back_move
+                        else:
+                            self.attacker = self.front_pokemon
+                            self.defender = self.back_pokemon
+                            self.attack_move = self.front_move
+                        if self.attack_accuracy(self.attacker, self.attack_move, self.defender):
+                            self.attack_result = self.attack(self.attacker, self.attack_move, self.defender)
                             match self.attack_result.move_category:
                                 case 2 | 6 | 7:
                                     self.stat_change_num = len(self.attack_result.stat_change_list)
                                 case 0 | 6 | 7 | 8 | 9:
                                     self.hurt_sound.play()
-                            self.attack_state = AttackState.FIRST_ATTACK_HIT
+                            self.attack_state = AttackState.ATTACK_HIT
                             self.text_time = 1
                         else:
-                            self.attack_state = AttackState.FIRST_ATTACK_NOT_HIT
+                            self.attack_state = AttackState.ATTACK_NOT_HIT
                             self.text_time = 1
 
-                    case AttackState.FIRST_ATTACK_HIT:
-                        if self.attack_result.is_critical:
-                            self.damage_time[0 if self.last_pokemon.enemy else 1] += 1
-                        is_enemy: str = 'Enemy ' if self.first_pokemon.enemy else ''
-                        self.animate_text(f'{is_enemy}{self.first_pokemon.name}\nused {self.first_move.name}')
+                    case AttackState.ATTACK_HIT:
+                        if self.attack_result.type_effectiveness:
+                            self.damage_time[0 if self.defender.enemy else 1] += 1
+                        is_enemy: str = 'Enemy ' if self.attacker.enemy else ''
+                        self.animate_text(f'{is_enemy}{self.attacker.name}\nused {self.attack_move.name}')
 
-                    case AttackState.FIRST_CRICAL_HIT:
-                        if self.attack_result.is_critical:
-                            self.damage_time[0 if self.last_pokemon.enemy else 1] += 1
+                    case AttackState.CRICAL_HIT:
+                        if self.attack_result.type_effectiveness:
+                            self.damage_time[0 if self.defender.enemy else 1] += 1
                         self.animate_text(f'Critical hit!')
 
-                    case AttackState.FIRST_EFFECTIVE:
-                        if self.attack_result.is_critical:
-                            self.damage_time[0 if self.last_pokemon.enemy else 1] += 1
-                        is_enemy: str = 'Enemy ' if self.last_pokemon.enemy else ''
+                    case AttackState.EFFECTIVE:
+                        if self.attack_result.type_effectiveness:
+                            self.damage_time[0 if self.defender.enemy else 1] += 1
+                        is_enemy: str = 'Enemy ' if self.defender.enemy else ''
                         match self.attack_result.type_effectiveness:
                             case 2 | 4:
                                 self.animate_text(f"It's super\neffective!")
                             case 0.5 | 0.25:
                                 self.animate_text(f"It's not very\neffective...")
                             case 0:
-                                self.animate_text(f'{is_enemy}{self.last_pokemon.name}')
+                                self.animate_text(f'{is_enemy}{self.defender.name}')
                             case 1 | None:
-                                self.attack_state = AttackState.FIRST_STAT_CHANGE
+                                self.attack_state = AttackState.STAT_CHANGE
                                 self.text_time = 1
 
                         if self.front_pokemon.hp == 0:
@@ -235,10 +237,14 @@ class Battle:
                             self.battle_state = BattleState.DEFEAT
                             self.text_time = 1
 
-                    case AttackState.FIRST_STAT_CHANGE:
+                    case AttackState.STAT_CHANGE:
                         self.damage_time = [0, 0]
                         if self.stat_change_num == 0 or not self.attack_result.stat_change_list:
-                            self.attack_state = AttackState.LAST_ATTACK
+                            if self.is_first_turn:
+                                self.is_first_turn = False
+                                self.attack_state = AttackState.ATTACK
+                            else:
+                                self.battle_state = BattleState.SELECTION
                         else:
                             target_pokemon: Pokemon = self.attack_result.stat_change_target
                             is_enemy: str = 'Enemy ' if target_pokemon.enemy else ''
@@ -262,86 +268,9 @@ class Battle:
                                 case (stat_name, 10):
                                     self.animate_text(f"{is_enemy}{target_pokemon.name}\n{stat_name} won't go any lower!")
 
-                    case AttackState.FIRST_ATTACK_NOT_HIT:
-                        is_enemy: str = 'Enemy ' if self.first_pokemon.enemy else ''
-                        self.animate_text(f'{is_enemy}{self.first_pokemon.name}\nattack missed!')
-
-                    case AttackState.LAST_ATTACK:
-                        if self.attack_accuracy(self.last_pokemon, self.last_move, self.first_pokemon):
-                            self.attack_result = self.attack(self.last_pokemon, self.last_move, self.first_pokemon)
-                            print(self.attack_result)
-                            match self.attack_result.move_category:
-                                case 2 | 6 | 7:
-                                    self.stat_change_num = len(self.attack_result.stat_change_list)
-                                case 0 | 6 | 7 | 8 | 9:
-                                    self.hurt_sound.play()
-                            self.attack_state = AttackState.LAST_ATTACK_HIT
-                            self.text_time = 1
-                        else:
-                            self.attack_state = AttackState.LAST_ATTACK_NOT_HIT
-                            self.text_time = 1
-
-                    case AttackState.LAST_ATTACK_HIT:
-                        if self.attack_result.is_critical:
-                            self.damage_time[0 if self.first_pokemon.enemy else 1] += 1
-                        is_enemy: str = 'Enemy ' if self.last_pokemon.enemy else ''
-                        self.animate_text(f'{is_enemy}{self.last_pokemon.name}\nused {self.last_move.name}')
-
-                    case AttackState.LAST_CRICAL_HIT:
-                        if self.attack_result.is_critical:
-                            self.damage_time[0 if self.first_pokemon.enemy else 1] += 1
-                        self.animate_text(f'Critical hit!')
-
-                    case AttackState.LAST_EFFECTIVE:
-                        if self.attack_result.is_critical:
-                            self.damage_time[0 if self.first_pokemon.enemy else 1] += 1
-                        is_enemy: str = 'Enemy ' if self.first_pokemon.enemy else ''
-                        match self.attack_result.type_effectiveness:
-                            case 2 | 4:
-                                self.animate_text(f"It's super\neffective!")
-                            case 0.5 | 0.25:
-                                self.animate_text(f"It's not very\neffective...")
-                            case 0:
-                                self.animate_text(f'{is_enemy}{self.first_pokemon.name}')
-                            case 1 | None:
-                                self.attack_state = AttackState.LAST_STAT_CHANGE
-                                self.text_time = 1
-
-                        if self.front_pokemon.hp == 0:
-                            self.battle_state = BattleState.DEFEAT
-                        elif self.back_pokemon.hp == 0:
-                            self.battle_state = BattleState.DEFEAT
-
-                    case AttackState.LAST_STAT_CHANGE:
-                        self.damage_time = [0, 0]
-                        if self.stat_change_num == 0 or not self.attack_result.stat_change_list:
-                            self.battle_state = BattleState.SELECTION
-                        else:
-                            target_pokemon: Pokemon = self.attack_result.stat_change_target
-                            is_enemy = 'Enemy ' if target_pokemon.enemy else ''
-                            match self.attack_result.stat_change_list[self.stat_change_num - 1]:
-                                case (stat_name, 1):
-                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} rose!')
-                                case (stat_name, 2):
-                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} rose sharply!!')
-                                case (stat_name, 3):
-                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} rose drastically!!!')
-                                case (stat_name, 4):
-                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\nmaxed its {stat_name}!!!!')
-                                case (stat_name, 6):
-                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} fell!')
-                                case (stat_name, 7):
-                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} harshly fell!!')
-                                case (stat_name, 8):
-                                    self.animate_text(f'{is_enemy}{target_pokemon.name}\n{stat_name} severely fell!!!')
-                                case (stat_name, 9):
-                                    self.animate_text(f"{is_enemy}{target_pokemon.name}\n{stat_name} won't go any higher!")
-                                case (stat_name, 10):
-                                    self.animate_text(f"{is_enemy}{target_pokemon.name}\n{stat_name} won't go any lower!")
-
-                    case AttackState.LAST_ATTACK_NOT_HIT:
-                        is_enemy: str = 'Enemy ' if self.last_pokemon.enemy else ''
-                        self.animate_text(f'{is_enemy}{self.last_pokemon.name}\nattack missed!')
+                    case AttackState.ATTACK_NOT_HIT:
+                        is_enemy: str = 'Enemy ' if self.attacker.enemy else ''
+                        self.animate_text(f'{is_enemy}{self.attacker.name}\nattack missed!')
 
         pg.draw.line(self.move_panel, const.BLACK, (0, 0), (const.PANEL_WIDTH, 0), 2)
         screen.blit(self.move_panel, self.move_panel_rect)
@@ -352,55 +281,35 @@ class Battle:
         if self.text_time != -1:
             self.text_time = -1
             return
-        print(self.battle_state, self.attack_state)
         match self.battle_state:
             case BattleState.ATTACK:
                 match self.attack_state:
-                    case AttackState.FIRST_ATTACK_HIT:
-                        print(f'{self.attack_result.move_category=}')
+                    case AttackState.ATTACK_HIT:
                         match self.attack_result.move_category:
                             case 2 | 6 | 7:
-                                self.attack_state = AttackState.FIRST_STAT_CHANGE
+                                self.attack_state = AttackState.STAT_CHANGE
                                 self.text_time = 1
                             case 0 | 6 | 7 | 8 | 9:
                                 if self.attack_result.is_critical:
-                                    self.attack_state = AttackState.FIRST_CRICAL_HIT
+                                    self.attack_state = AttackState.CRICAL_HIT
                                     self.text_time = 1
                                 else:
-                                    self.attack_state = AttackState.FIRST_EFFECTIVE
+                                    self.attack_state = AttackState.EFFECTIVE
                                     self.text_time = 1
-                    case AttackState.FIRST_CRICAL_HIT:
-                        self.attack_state = AttackState.FIRST_EFFECTIVE
+                    case AttackState.CRICAL_HIT:
+                        self.attack_state = AttackState.EFFECTIVE
                         self.text_time = 1
-                    case AttackState.FIRST_EFFECTIVE:
-                        self.attack_state = AttackState.FIRST_STAT_CHANGE
+                    case AttackState.EFFECTIVE:
+                        self.attack_state = AttackState.STAT_CHANGE
                         self.text_time = 1
-                    case AttackState.FIRST_ATTACK_NOT_HIT:
-                        self.attack_state = AttackState.LAST_ATTACK
+                    case AttackState.ATTACK_NOT_HIT:
+                        if self.is_first_turn:
+                            self.is_first_turn = False
+                            self.attack_state = AttackState.ATTACK
+                        else:
+                            self.battle_state = BattleState.SELECTION
                         self.text_time = 1
-                    case AttackState.LAST_ATTACK_HIT:
-                        match self.attack_result.move_category:
-                            case 2 | 6 | 7:
-                                self.attack_state = AttackState.LAST_STAT_CHANGE
-                                self.text_time = 1
-                            case 0 | 6 | 7 | 8 | 9:
-                                if self.attack_result.is_critical:
-                                    self.attack_state = AttackState.LAST_CRICAL_HIT
-                                    self.text_time = 1
-                                else:
-                                    self.attack_state = AttackState.LAST_EFFECTIVE
-                                    self.text_time = 1
-                    case AttackState.LAST_CRICAL_HIT:
-                        self.attack_state = AttackState.LAST_EFFECTIVE
-                        self.text_time = 1
-                    case AttackState.LAST_EFFECTIVE:
-                        self.attack_state = AttackState.LAST_STAT_CHANGE
-                        self.text_time = 1
-                    case AttackState.LAST_ATTACK_NOT_HIT:
-                        self.battle_state = BattleState.SELECTION
-                        self.attack_state = AttackState.FIRST_ATTACK
-                        self.text_time = 1
-                    case AttackState.FIRST_STAT_CHANGE | AttackState.LAST_STAT_CHANGE:
+                    case AttackState.STAT_CHANGE:
                         self.stat_change_num -= 1
                         self.text_time = 1
             case BattleState.DEFEAT:
@@ -430,14 +339,12 @@ class Battle:
             self.text_time += 1
 
     def attack(self, attck_pokemon: 'Pokemon', move: Move, defender_pokemon: 'Pokemon') -> MoveResult:
-        print(f'{move.category=}')
         match move.category:
             case 0:
                 move_result, damage = self.damage_attack(attck_pokemon, move, defender_pokemon)
                 defender_pokemon.hp -= damage
                 return move_result
             case 2:
-                print(f'{move.stat_chance=}')
                 match move.target:
                     case 10 | 11:
                         return self.stat_change(move, defender_pokemon)

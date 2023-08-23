@@ -3,11 +3,9 @@ import os.path
 import pygame as pg
 
 import constants as const
-import util
 from battle import Battle
 from generation import Generation
 from pokemon import Pokemon
-from state import BattleState, AttackState
 
 TITLE = "Pokemon Battle"
 FPS = 60
