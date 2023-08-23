@@ -267,7 +267,7 @@ class Battle:
                         self.animate_text(f'{is_enemy}{self.first_pokemon.name}\nattack missed!')
 
                     case AttackState.LAST_ATTACK:
-                        if self.attack_accuracy(self.first_pokemon, self.last_move, self.first_pokemon):
+                        if self.attack_accuracy(self.last_pokemon, self.last_move, self.first_pokemon):
                             self.attack_result = self.attack(self.last_pokemon, self.last_move, self.first_pokemon)
                             print(self.attack_result)
                             match self.attack_result.move_category:
