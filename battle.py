@@ -352,56 +352,57 @@ class Battle:
         if self.text_time != -1:
             self.text_time = -1
             return
-        match self.attack_state:
-            case AttackState.FIRST_ATTACK_HIT:
-                print(f'{self.attack_result.move_category=}')
-                match self.attack_result.move_category:
-                    case 2 | 6 | 7:
-                        self.attack_state = AttackState.FIRST_STAT_CHANGE
-                        self.text_time = 1
-                    case 0 | 6 | 7 | 8 | 9:
-                        if self.attack_result.is_critical:
-                            self.attack_state = AttackState.FIRST_CRICAL_HIT
-                            self.text_time = 1
-                        else:
-                            self.attack_state = AttackState.FIRST_EFFECTIVE
-                            self.text_time = 1
-            case AttackState.FIRST_CRICAL_HIT:
-                self.attack_state = AttackState.FIRST_EFFECTIVE
-                self.text_time = 1
-            case AttackState.FIRST_EFFECTIVE:
-                self.attack_state = AttackState.FIRST_STAT_CHANGE
-                self.text_time = 1
-            case AttackState.FIRST_ATTACK_NOT_HIT:
-                self.attack_state = AttackState.LAST_ATTACK
-                self.text_time = 1
-            case AttackState.LAST_ATTACK_HIT:
-                match self.attack_result.move_category:
-                    case 2 | 6 | 7:
-                        self.attack_state = AttackState.LAST_STAT_CHANGE
-                        self.text_time = 1
-                    case 0 | 6 | 7 | 8 | 9:
-                        if self.attack_result.is_critical:
-                            self.attack_state = AttackState.LAST_CRICAL_HIT
-                            self.text_time = 1
-                        else:
-                            self.attack_state = AttackState.LAST_EFFECTIVE
-                            self.text_time = 1
-            case AttackState.LAST_CRICAL_HIT:
-                self.attack_state = AttackState.LAST_EFFECTIVE
-                self.text_time = 1
-            case AttackState.LAST_EFFECTIVE:
-                self.attack_state = AttackState.LAST_STAT_CHANGE
-                self.text_time = 1
-            case AttackState.LAST_ATTACK_NOT_HIT:
-                self.battle_state = BattleState.SELECTION
-                self.attack_state = AttackState.FIRST_ATTACK
-                self.text_time = 1
-            case AttackState.FIRST_STAT_CHANGE | AttackState.LAST_STAT_CHANGE:
-                self.stat_change_num -= 1
-                self.text_time = 1
         print(self.battle_state, self.attack_state)
         match self.battle_state:
+            case BattleState.ATTACK:
+                match self.attack_state:
+                    case AttackState.FIRST_ATTACK_HIT:
+                        print(f'{self.attack_result.move_category=}')
+                        match self.attack_result.move_category:
+                            case 2 | 6 | 7:
+                                self.attack_state = AttackState.FIRST_STAT_CHANGE
+                                self.text_time = 1
+                            case 0 | 6 | 7 | 8 | 9:
+                                if self.attack_result.is_critical:
+                                    self.attack_state = AttackState.FIRST_CRICAL_HIT
+                                    self.text_time = 1
+                                else:
+                                    self.attack_state = AttackState.FIRST_EFFECTIVE
+                                    self.text_time = 1
+                    case AttackState.FIRST_CRICAL_HIT:
+                        self.attack_state = AttackState.FIRST_EFFECTIVE
+                        self.text_time = 1
+                    case AttackState.FIRST_EFFECTIVE:
+                        self.attack_state = AttackState.FIRST_STAT_CHANGE
+                        self.text_time = 1
+                    case AttackState.FIRST_ATTACK_NOT_HIT:
+                        self.attack_state = AttackState.LAST_ATTACK
+                        self.text_time = 1
+                    case AttackState.LAST_ATTACK_HIT:
+                        match self.attack_result.move_category:
+                            case 2 | 6 | 7:
+                                self.attack_state = AttackState.LAST_STAT_CHANGE
+                                self.text_time = 1
+                            case 0 | 6 | 7 | 8 | 9:
+                                if self.attack_result.is_critical:
+                                    self.attack_state = AttackState.LAST_CRICAL_HIT
+                                    self.text_time = 1
+                                else:
+                                    self.attack_state = AttackState.LAST_EFFECTIVE
+                                    self.text_time = 1
+                    case AttackState.LAST_CRICAL_HIT:
+                        self.attack_state = AttackState.LAST_EFFECTIVE
+                        self.text_time = 1
+                    case AttackState.LAST_EFFECTIVE:
+                        self.attack_state = AttackState.LAST_STAT_CHANGE
+                        self.text_time = 1
+                    case AttackState.LAST_ATTACK_NOT_HIT:
+                        self.battle_state = BattleState.SELECTION
+                        self.attack_state = AttackState.FIRST_ATTACK
+                        self.text_time = 1
+                    case AttackState.FIRST_STAT_CHANGE | AttackState.LAST_STAT_CHANGE:
+                        self.stat_change_num -= 1
+                        self.text_time = 1
             case BattleState.DEFEAT:
                 self.back_pokemon.add_experience(util.get_battle_experience(self.front_pokemon))
                 self.battle_state = BattleState.EXP
